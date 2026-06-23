@@ -6,7 +6,9 @@ import base64
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["*"])
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 
 # Load Haar cascade once at startup
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')

@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 
 const API = "https://ai-proctor-23da.onrender.com";
-const FACE_API = "https://ai-proctor-face.onrender.com"; // face microservice
+const FACE_API = "https://ai-proctor-face.onrender.com";
+
+// Wake up face service on load
+fetch(`${FACE_API}/health`).catch(() => {});
 
 function useCamera(videoRef) {
   const [ready, setReady] = useState(false);
@@ -64,7 +67,7 @@ export function FaceRegister({ token, onDone }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image }),
-      });
+      }).catch(() => { throw new Error("Face service unavailable. Please wait 30 seconds and retry (service waking up)."); });
       const faceData = await faceRes.json();
       if (!faceRes.ok) throw new Error(faceData.error);
 
@@ -131,7 +134,7 @@ export function FaceVerify({ token, onSuccess, onCancel }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, descriptor: meData.faceDescriptor }),
-      });
+      }).catch(() => { throw new Error("Face service unavailable. Please wait 30 seconds and retry."); });
       const faceData = await faceRes.json();
       if (!faceRes.ok) throw new Error(faceData.error);
 

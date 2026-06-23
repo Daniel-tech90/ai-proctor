@@ -3,6 +3,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 const API = "https://ai-proctor-23da.onrender.com";
 const FACE_API = "https://ai-proctor-face.onrender.com";
 
+// Wake up face service on load
+fetch(`${FACE_API}/health`).catch(() => {});
+
 function captureSnapshot(videoRef) {
   const canvas = document.createElement("canvas");
   canvas.width = 320; canvas.height = 240;
