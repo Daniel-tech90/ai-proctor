@@ -199,7 +199,20 @@ export default function ExamScreen({ exam, onFinish }) {
   const [fullscreenExits, setFullscreenExits] = useState(0);
   const [sessionId, setSessionId] = useState(null);
   const token = localStorage.getItem("token");
+  const camRef = useRef(null);
   const API = "https://ai-proctor-23da.onrender.com";
+
+  // Start camera on exam mount, stop on submit
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: { width: 160, height: 120, facingMode: "user" } })
+      .then((stream) => { if (camRef.current) camRef.current.srcObject = stream; })
+      .catch(() => {});
+    return () => {
+      if (camRef.current?.srcObject)
+        camRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   // Start session on mount
   useEffect(() => {
@@ -249,6 +262,8 @@ export default function ExamScreen({ exam, onFinish }) {
     exam.questions.forEach((q, i) => { if (answers[i] === q.answer) correct++; });
     setScore(correct);
     setSubmitted(true);
+    if (camRef.current?.srcObject)
+      camRef.current.srcObject.getTracks().forEach((t) => t.stop());
     if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
     // Save to backend
     if (sessionId) {
@@ -320,12 +335,20 @@ export default function ExamScreen({ exam, onFinish }) {
         ))}
       </div>
       {/* Header */}
-      <div className="bg-white px-6 py-3 flex items-center justify-between border-b border-gray-200">
+      <div className="bg-white px-6 py-3 flex items-center justify-between border-b border-gray-200 z-10 relative">
         <div>
           <p className="font-bold text-sm">{exam.title}</p>
           <p className="text-gray-500 text-xs">{exam.subject}</p>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          {/* Live camera feed */}
+          <div className="relative rounded-xl overflow-hidden bg-gray-900 border-2 border-green-500" style={{ width: 80, height: 60 }}>
+            <video ref={camRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <div className="absolute top-1 left-1 flex items-center gap-1">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-white text-xs font-bold">LIVE</span>
+            </div>
+          </div>
           <div className="text-center">
             <p className="text-xs text-gray-500">Answered</p>
             <p className="font-bold text-green-400">{answered}/{total}</p>
