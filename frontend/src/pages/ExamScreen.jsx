@@ -48,6 +48,9 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         if (videoRef.current) videoRef.current.srcObject = stream;
         setStatus("👤 Look straight at the camera...");
 
+        // Preload full models in background while user positions face
+        loadFullModels().catch(() => {});
+
         intervalRef.current = setInterval(async () => {
           if (!videoRef.current) return;
           try {

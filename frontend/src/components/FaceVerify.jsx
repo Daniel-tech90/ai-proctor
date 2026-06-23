@@ -37,6 +37,9 @@ function useFacePresence(videoRef) {
       if (videoRef.current) videoRef.current.srcObject = stream;
       setStatus("👤 Look at the camera...");
 
+      // Preload full models in background while user positions face
+      loadFullModels().catch(() => {});
+
       intervalRef.current = setInterval(async () => {
         if (!videoRef.current || faceFound) return;
         try {
