@@ -80,7 +80,7 @@ export default function Navbar({ onLogin, onLogout, user }) {
           </div>
 
           {/* Desktop Nav */}
-          <ul className="hidden md:flex items-center gap-1 flex-1 ml-8">
+          <ul className="hidden md:flex items-center gap-4 flex-1 ml-8">
             {user ? (
               dashboardLinks.map((item) => {
                 const active = location.pathname === item.path;
