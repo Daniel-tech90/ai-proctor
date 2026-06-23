@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: ["http://localhost:3000", "https://dinesh.vercel.app"], credentials: true }));
 app.use(express.json());
 
 // Routes
@@ -22,7 +22,7 @@ app.get("/api/health", (req, res) => res.json({ status: "OK", message: "AI Proct
 
 // MongoDB connection + server start
 mongoose
-  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, family: 4 })
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
     app.listen(process.env.PORT || 5000, () =>
