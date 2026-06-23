@@ -175,10 +175,13 @@ export default function ExamScreen({ exam, onFinish }) {
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col relative overflow-hidden">
       {/* Watermark username */}
-      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center select-none">
-        <p className="text-gray-200 font-bold text-6xl rotate-[-30deg] whitespace-nowrap">
-          {username}
-        </p>
+      <div className="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <p key={i} className="absolute text-gray-300 font-bold text-4xl rotate-[-30deg] whitespace-nowrap blur-[2px] opacity-30"
+            style={{ top: `${(i % 4) * 28 - 5}%`, left: `${Math.floor(i / 4) * 38 - 10}%` }}>
+            {username}
+          </p>
+        ))}
       </div>
       {/* Header */}
       <div className="bg-white px-6 py-3 flex items-center justify-between border-b border-gray-200">
