@@ -41,9 +41,13 @@ exports.login = async (req, res) => {
     user.lastLoginAt = new Date();
     user.lastLoginIp = ip;
     user.isLoggedIn = true;
+    // Clear stale face descriptors (old format had different length)
+    if (user.faceDescriptor?.length && user.faceDescriptor.length !== 128) {
+      user.faceDescriptor = null;
+    }
     await user.save();
 
-    res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role, hasFace: !!(user.faceDescriptor?.length) } });
+    res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role, hasFace: user.faceDescriptor?.length === 128 } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
