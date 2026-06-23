@@ -51,7 +51,6 @@ export default function Navbar({ onLogin, onLogout, user }) {
       setShowLogin(false);
       setForm({ email: "", password: "" });
       if (onLogin) onLogin(data.user);
-      navigate("/assessments");
     } catch (err) {
       setError(err.message);
     } finally {

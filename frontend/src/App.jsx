@@ -47,9 +47,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={
-          user ? <Navigate to="/assessments" replace /> : <LandingPage user={user} onLogin={handleLogin} onLogout={handleLogout} />
-        } />
+        <Route path="/" element={<LandingPage user={user} onLogin={handleLogin} onLogout={handleLogout} />} />
         <Route path="/assessments" element={
           user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Assessments /></DashboardLayout> : <Navigate to="/" replace />
         } />
