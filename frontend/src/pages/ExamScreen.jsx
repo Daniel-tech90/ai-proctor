@@ -248,9 +248,20 @@ export default function ExamScreen({ exam, onFinish }) {
   const [tabSwitches, setTabSwitches] = useState(0);
   const [fullscreenExits, setFullscreenExits] = useState(0);
   const [sessionId, setSessionId] = useState(null);
+  const [warning, setWarning] = useState(null); // proctoring warning
+  const [proctoringAlerts, setProctoringAlerts] = useState(0);
   const token = localStorage.getItem("token");
   const camRef = useRef(null);
+  const proctoringRef = useRef(null);
+  const warningTimeoutRef = useRef(null);
   const API = "https://ai-proctor-23da.onrender.com";
+
+  const showWarning = useCallback((msg) => {
+    setWarning(msg);
+    setProctoringAlerts((v) => v + 1);
+    clearTimeout(warningTimeoutRef.current);
+    warningTimeoutRef.current = setTimeout(() => setWarning(null), 5000);
+  }, []);
 
   // Start camera on exam mount, stop on submit
   useEffect(() => {
@@ -263,6 +274,48 @@ export default function ExamScreen({ exam, onFinish }) {
         camRef.current.srcObject.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  // Proctoring — brightness-based face presence check every 3s
+  useEffect(() => {
+    if (submitted) return;
+    let noFaceSeconds = 0;
+
+    proctoringRef.current = setInterval(() => {
+      if (!camRef.current || !camRef.current.srcObject) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = 64; canvas.height = 48;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(camRef.current, 0, 0, 64, 48);
+      const data = ctx.getImageData(0, 0, 64, 48).data;
+
+      // Overall brightness
+      let brightness = 0;
+      for (let i = 0; i < data.length; i += 4)
+        brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+      brightness /= (data.length / 4);
+
+      // Check center region brightness (where face should be)
+      const centerData = ctx.getImageData(16, 8, 32, 32).data;
+      let centerBrightness = 0;
+      for (let i = 0; i < centerData.length; i += 4)
+        centerBrightness += (centerData[i] + centerData[i + 1] + centerData[i + 2]) / 3;
+      centerBrightness /= (centerData.length / 4);
+
+      if (brightness < 30) {
+        showWarning("⚠️ Camera blocked or too dark! Please ensure your face is visible.");
+      } else if (centerBrightness < 40) {
+        noFaceSeconds += 3;
+        if (noFaceSeconds >= 6)
+          showWarning("⚠️ Face not detected! Please look at the camera.");
+      } else if (brightness > 230) {
+        showWarning("⚠️ Too much light detected! Avoid sitting against a bright background.");
+      } else {
+        noFaceSeconds = 0;
+      }
+    }, 3000);
+
+    return () => clearInterval(proctoringRef.current);
+  }, [submitted, showWarning]);
 
   // Start session on mount
   useEffect(() => {
@@ -312,6 +365,8 @@ export default function ExamScreen({ exam, onFinish }) {
     exam.questions.forEach((q, i) => { if (answers[i] === q.answer) correct++; });
     setScore(correct);
     setSubmitted(true);
+    clearInterval(proctoringRef.current);
+    clearTimeout(warningTimeoutRef.current);
     if (camRef.current?.srcObject)
       camRef.current.srcObject.getTracks().forEach((t) => t.stop());
     if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
@@ -357,7 +412,7 @@ export default function ExamScreen({ exam, onFinish }) {
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Exam Submitted!</h2>
           <p className="text-gray-500 text-sm mb-6">{exam.title}</p>
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {[["Score", `${score}/${total}`], ["Accuracy", `${Math.round((score / total) * 100)}%`], ["Tab Switches", tabSwitches], ["Fullscreen Exits", fullscreenExits]].map(([label, val]) => (
+            {[["Score", `${score}/${total}`], ["Accuracy", `${Math.round((score / total) * 100)}%`], ["Tab Switches", tabSwitches], ["Fullscreen Exits", fullscreenExits], ["Proctoring Alerts", proctoringAlerts]].map(([label, val]) => (
               <div key={label} className="bg-gray-50 rounded-xl p-3">
                 <p className="text-lg font-bold text-blue-600">{val}</p>
                 <p className="text-xs text-gray-500">{label}</p>
@@ -375,6 +430,16 @@ export default function ExamScreen({ exam, onFinish }) {
   // ─── Exam UI ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col relative overflow-hidden">
+      {/* Proctoring Warning Overlay */}
+      {warning && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce max-w-md text-center">
+          <span className="text-2xl">🚨</span>
+          <div>
+            <p className="font-bold text-sm">Proctoring Alert</p>
+            <p className="text-xs text-red-100">{warning}</p>
+          </div>
+        </div>
+      )}
       {/* Watermark username */}
       <div className="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden">
         {Array.from({ length: 12 }).map((_, i) => (
@@ -403,10 +468,10 @@ export default function ExamScreen({ exam, onFinish }) {
             <p className="text-xs text-gray-500">Answered</p>
             <p className="font-bold text-green-400">{answered}/{total}</p>
           </div>
-          {(tabSwitches + fullscreenExits) > 0 && (
+          {(tabSwitches + fullscreenExits + proctoringAlerts) > 0 && (
             <div className="text-center">
               <p className="text-xs text-gray-500">Violations</p>
-              <p className="font-bold text-red-400">{tabSwitches + fullscreenExits}</p>
+              <p className="font-bold text-red-400">{tabSwitches + fullscreenExits + proctoringAlerts}</p>
             </div>
           )}
           <div className={`text-center px-4 py-2 rounded-xl ${timeLeft < 60 ? "bg-red-600 animate-pulse" : "bg-blue-600"}`}>
