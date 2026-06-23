@@ -97,7 +97,12 @@ export function Blogs() {
 
 export function Dashboard() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token");
+    await fetch("https://ai-proctor-23da.onrender.com/api/auth/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.location.href = "/";

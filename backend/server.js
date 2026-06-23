@@ -10,7 +10,7 @@ app.set("trust proxy", true);
 
 // Middleware
 app.use(cors({ origin: ["http://localhost:3000", "https://dinesh.vercel.app", "https://ai-dinesh.vercel.app"], credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 // Routes
 app.use("/api/auth", require("./routes/auth.routes"));
