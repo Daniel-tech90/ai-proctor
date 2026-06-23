@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
 const API = "https://ai-proctor-23da.onrender.com";
-const FACE_API = "https://ai-proctor-face.onrender.com";
-
-// Wake up face service on load
-fetch(`${FACE_API}/health`).catch(() => {});
 
 function useCamera(videoRef) {
   const [ready, setReady] = useState(false);
@@ -58,29 +54,16 @@ export function FaceRegister({ token, onDone }) {
 
   const handleSave = async () => {
     setSaving(true);
-    setStatus("Detecting face...");
+    setStatus("Processing...");
     try {
       const image = captureSnapshot(videoRef);
-
-      // Get descriptor from face service
-      const faceRes = await fetch(`${FACE_API}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
-      }).catch(() => { throw new Error("Face service unavailable. Please wait 30 seconds and retry (service waking up)."); });
-      const faceData = await faceRes.json();
-      if (!faceRes.ok) throw new Error(faceData.error);
-
-      // Save descriptor to backend
-      setStatus("Saving...");
-      const res = await fetch(`${API}/api/auth/register-face`, {
+      const res = await fetch(`${API}/api/face/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ faceDescriptor: faceData.descriptor }),
+        body: JSON.stringify({ image }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-
       setStatus("✅ Face registered!");
       setTimeout(onDone, 1000);
     } catch (e) {
@@ -118,26 +101,16 @@ export function FaceVerify({ token, onSuccess, onCancel }) {
   const handleVerify = async () => {
     setVerifying(true);
     setErrMsg("");
-    setStatus("Detecting face...");
+    setStatus("Verifying...");
     try {
       const image = captureSnapshot(videoRef);
-
-      // Get stored descriptor from backend
-      const meRes = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const meData = await meRes.json();
-
-      // Verify via face service
-      setStatus("Verifying...");
-      const faceRes = await fetch(`${FACE_API}/verify`, {
+      const res = await fetch(`${API}/api/face/verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, descriptor: meData.faceDescriptor }),
-      }).catch(() => { throw new Error("Face service unavailable. Please wait 30 seconds and retry."); });
-      const faceData = await faceRes.json();
-      if (!faceRes.ok) throw new Error(faceData.error);
-
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ image }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
       onSuccess();
     } catch (e) {
       setErrMsg(e.message);
