@@ -177,7 +177,7 @@ export default function ExamScreen({ exam, onFinish }) {
       {/* Watermark username */}
       <div className="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden">
         {Array.from({ length: 12 }).map((_, i) => (
-          <p key={i} className="absolute text-gray-300 font-bold text-4xl rotate-[-30deg] whitespace-nowrap blur-[2px] opacity-30"
+          <p key={i} className="absolute text-gray-400 font-bold text-4xl rotate-[-30deg] whitespace-nowrap opacity-20"
             style={{ top: `${(i % 4) * 28 - 5}%`, left: `${Math.floor(i / 4) * 38 - 10}%` }}>
             {username}
           </p>
