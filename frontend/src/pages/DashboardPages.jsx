@@ -2,7 +2,7 @@ import React from "react";
 import EmptyState from "../components/EmptyState";
 
 export function Assessments() {
-  return <EmptyState title="No Categories Found" subtitle="No assessment categories are available at the moment." />;
+  return <EmptyState title="No Categories Found" />;
 }
 
 export function Courses() {
