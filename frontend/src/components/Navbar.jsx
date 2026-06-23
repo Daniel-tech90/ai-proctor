@@ -17,7 +17,12 @@ export default function Navbar() {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const openLogin = () => setShowLogin(true);
+    window.addEventListener("open-login", openLogin);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("open-login", openLogin);
+    };
   }, []);
 
   const handleLogin = async (e) => {
