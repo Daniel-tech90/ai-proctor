@@ -6,13 +6,12 @@ import Features from "./components/Features";
 import HowItWorks from "./components/HowItWorks";
 import DashboardPreview from "./components/DashboardPreview";
 import Footer from "./components/Footer";
-import DashboardNav from "./components/DashboardNav";
 import { Assessments, Courses, Code, Practice, LSRW, Blogs, Dashboard } from "./pages/DashboardPages";
 
-function LandingPage({ onLogin }) {
+function LandingPage({ user, onLogin, onLogout }) {
   return (
     <div className="min-h-screen">
-      <Navbar onLogin={onLogin} />
+      <Navbar user={user} onLogin={onLogin} onLogout={onLogout} />
       <Hero />
       <Features />
       <HowItWorks />
@@ -27,11 +26,11 @@ function LandingPage({ onLogin }) {
   );
 }
 
-function DashboardLayout({ user, onLogout, children }) {
+function DashboardLayout({ user, onLogin, onLogout, children }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav user={user} onLogout={onLogout} />
-      <main>{children}</main>
+      <Navbar user={user} onLogin={onLogin} onLogout={onLogout} />
+      <main className="pt-20">{children}</main>
     </div>
   );
 }
@@ -48,35 +47,30 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Landing Page */}
         <Route path="/" element={
-          user ? <Navigate to="/assessments" replace /> : <LandingPage onLogin={handleLogin} />
+          user ? <Navigate to="/assessments" replace /> : <LandingPage user={user} onLogin={handleLogin} onLogout={handleLogout} />
         } />
-
-        {/* Protected Dashboard Routes */}
         <Route path="/assessments" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Assessments /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Assessments /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/courses" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Courses /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Courses /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/code" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Code /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Code /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/practice" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Practice /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Practice /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/lsrw" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><LSRW /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><LSRW /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/blogs" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Blogs /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Blogs /></DashboardLayout> : <Navigate to="/" replace />
         } />
         <Route path="/dashboard" element={
-          user ? <DashboardLayout user={user} onLogout={handleLogout}><Dashboard /></DashboardLayout> : <Navigate to="/" replace />
+          user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Dashboard /></DashboardLayout> : <Navigate to="/" replace />
         } />
-
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
