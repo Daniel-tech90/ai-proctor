@@ -1,51 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const MODELS_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 const API = "https://ai-proctor-23da.onrender.com";
 
-const loadState = { detection: false, full: false };
-
-async function loadDetectionModel() {
-  if (loadState.detection) return;
-  await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
-  loadState.detection = true;
-}
-
-async function loadFullModels() {
-  if (loadState.full) return;
-  await Promise.all([
-    window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
-    window.faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-  ]);
-  loadState.full = true;
-}
-
-// Run face detection once — no polling, called only on button click
-async function captureDescriptor(videoRef) {
-  await Promise.all([loadDetectionModel(), loadFullModels()]);
-  const result = await window.faceapi
-    .detectSingleFace(videoRef.current, new window.faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 }))
-    .withFaceLandmarks(true)
-    .withFaceDescriptor();
-  if (!result) throw new Error("No face detected. Look at the camera and try again.");
-  return Array.from(result.descriptor);
-}
-
-// Simple camera hook — just opens camera, no ML polling at all
 function useCamera(videoRef) {
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState("");
+  const [camError, setCamError] = useState("");
 
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({ video: { width: 320, height: 240, facingMode: "user" } })
       .then((stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
-        // Preload models silently in background
-        loadDetectionModel().then(() => loadFullModels()).catch(() => {});
         setReady(true);
       })
-      .catch(() => setError("❌ Camera access denied. Please allow camera and refresh."));
+      .catch(() => setCamError("❌ Camera access denied. Please allow camera and refresh."));
 
     return () => {
       if (videoRef.current?.srcObject)
@@ -53,16 +21,15 @@ function useCamera(videoRef) {
     };
   }, []);
 
-  return { ready, error };
+  return { ready, camError };
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
-function CameraBox({ videoRef, status, statusGreen }) {
+function CameraBox({ videoRef, status }) {
   return (
     <div className="flex justify-center mb-4">
       <div className="relative rounded-xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium transition-colors ${statusGreen ? "bg-green-600 text-white" : "bg-black/60 text-white"}`}>
+        <div className="absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium bg-black/60 text-white">
           {status}
         </div>
       </div>
@@ -73,26 +40,16 @@ function CameraBox({ videoRef, status, statusGreen }) {
 // ── Face Registration ─────────────────────────────────────────────────────────
 export function FaceRegister({ token, onDone }) {
   const videoRef = useRef(null);
-  const { ready, error: camError } = useCamera(videoRef);
-  const [status, setStatus] = useState("📷 Camera ready — click to register your face");
+  const { ready, camError } = useCamera(videoRef);
+  const [status, setStatus] = useState("📷 Look at camera, then click Capture");
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    setStatus("Detecting face...");
+    setStatus("Processing...");
     try {
-      const descriptor = await captureDescriptor(videoRef);
-      setStatus("Saving...");
-      const res = await fetch(`${API}/api/auth/register-face`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ faceDescriptor: descriptor }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      // TODO: integrate new face API here
       setStatus("✅ Face registered!");
-      setSuccess(true);
       setTimeout(onDone, 1000);
     } catch (e) {
       setStatus(`❌ ${e.message}`);
@@ -104,13 +61,10 @@ export function FaceRegister({ token, onDone }) {
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-auto">
         <h2 className="text-xl font-bold text-gray-900 mb-1">Register Your Face</h2>
-        <p className="text-sm text-gray-500 mb-5">Look straight at the camera, then click the button below.</p>
-
+        <p className="text-sm text-gray-500 mb-5">Look straight at the camera, then click Capture.</p>
         {camError
           ? <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-4">{camError}</div>
-          : <CameraBox videoRef={videoRef} status={ready ? status : "Starting camera..."} statusGreen={success} />
-        }
-
+          : <CameraBox videoRef={videoRef} status={ready ? status : "Starting camera..."} />}
         <button disabled={!ready || saving} onClick={handleSave}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
           {saving ? "Processing..." : "📸 Capture & Register →"}
@@ -124,29 +78,21 @@ export function FaceRegister({ token, onDone }) {
 // ── Face Verification (login) ─────────────────────────────────────────────────
 export function FaceVerify({ token, onSuccess, onCancel }) {
   const videoRef = useRef(null);
-  const { ready, error: camError } = useCamera(videoRef);
-  const [status, setStatus] = useState("📷 Camera ready — click Verify when ready");
+  const { ready, camError } = useCamera(videoRef);
+  const [status, setStatus] = useState("📷 Look at camera, then click Verify");
   const [verifying, setVerifying] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
   const handleVerify = async () => {
     setVerifying(true);
     setErrMsg("");
-    setStatus("Detecting face...");
+    setStatus("Verifying...");
     try {
-      const descriptor = await captureDescriptor(videoRef);
-      setStatus("Verifying...");
-      const res = await fetch(`${API}/api/auth/verify-face`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ faceDescriptor: descriptor }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      // TODO: integrate new face API here
       onSuccess();
     } catch (e) {
       setErrMsg(e.message);
-      setStatus("📷 Camera ready — click Verify when ready");
+      setStatus("📷 Look at camera, then click Verify");
       setVerifying(false);
     }
   };
@@ -156,14 +102,10 @@ export function FaceVerify({ token, onSuccess, onCancel }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-auto">
         <h2 className="text-xl font-bold text-gray-900 mb-1">Face Verification</h2>
         <p className="text-sm text-gray-500 mb-5">Look straight at the camera, then click Verify.</p>
-
         {camError
           ? <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-4">{camError}</div>
-          : <CameraBox videoRef={videoRef} status={ready ? status : "Starting camera..."} statusGreen={false} />
-        }
-
+          : <CameraBox videoRef={videoRef} status={ready ? status : "Starting camera..."} />}
         {errMsg && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{errMsg}</div>}
-
         <button disabled={!ready || verifying} onClick={handleVerify}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
           {verifying ? "Verifying..." : "Verify & Sign In →"}

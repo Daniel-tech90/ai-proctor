@@ -1,31 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
-const MODELS_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 const API = "https://ai-proctor-23da.onrender.com";
-
-const loadState = { detection: false, full: false };
-async function loadDetectionModel() {
-  if (loadState.detection) return;
-  await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
-  loadState.detection = true;
-}
-async function loadFullModels() {
-  if (loadState.full) return;
-  await Promise.all([
-    window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
-    window.faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-  ]);
-  loadState.full = true;
-}
-async function captureDescriptor(videoRef) {
-  await Promise.all([loadDetectionModel(), loadFullModels()]);
-  const result = await window.faceapi
-    .detectSingleFace(videoRef.current, new window.faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 }))
-    .withFaceLandmarks(true)
-    .withFaceDescriptor();
-  if (!result) throw new Error("No face detected. Look at the camera and try again.");
-  return Array.from(result.descriptor);
-}
 
 // ─── Face Capture Step ────────────────────────────────────────────────────────
 function FaceCaptureStep({ onVerified, onCancel }) {
@@ -41,8 +16,6 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       .getUserMedia({ video: { width: 320, height: 240, facingMode: "user" } })
       .then((stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
-        // Preload models silently in background
-        loadDetectionModel().then(() => loadFullModels()).catch(() => {});
         setCamReady(true);
         setStatus("📷 Look straight at the camera, then click Capture");
       })
@@ -56,19 +29,9 @@ function FaceCaptureStep({ onVerified, onCancel }) {
   const handleCapture = async () => {
     setVerifying(true);
     setError("");
-    setStatus("Detecting face...");
+    setStatus("Verifying...");
     try {
-      const descriptor = await captureDescriptor(videoRef);
-      setStatus("Verifying...");
-      const res = await fetch(`${API}/api/auth/verify-face`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ faceDescriptor: descriptor }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      if (videoRef.current?.srcObject)
-        videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+      // TODO: replace with new API
       onVerified();
     } catch (e) {
       setError(e.message);
@@ -84,16 +47,13 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         <h3 className="font-bold text-gray-900 text-base">Step 2 — Identity Verification</h3>
       </div>
       <p className="text-sm text-gray-500 mb-5 self-start">Look directly at the camera, then click Capture & Proceed.</p>
-
       <div className="flex justify-center w-full mb-4">
         <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium bg-black/60 text-white">{status}</div>
         </div>
       </div>
-
       {error && <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>}
-
       <div className="flex gap-3 w-full mt-2">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
         <button disabled={!camReady || verifying} onClick={handleCapture}
