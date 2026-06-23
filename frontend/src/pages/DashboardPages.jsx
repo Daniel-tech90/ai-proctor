@@ -50,7 +50,6 @@ export function Dashboard() {
               </div>
             </div>
             <div className="text-sm text-blue-100 space-y-2">
-              <p>Organization: C V Raman Global U...</p>
               <p>Batch: Technical Batch 02 - 2027</p>
               <p>ID No: {user.email?.split("@")[0]}</p>
             </div>
