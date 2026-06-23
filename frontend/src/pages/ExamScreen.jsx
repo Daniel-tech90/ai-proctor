@@ -42,7 +42,6 @@ function FaceCaptureStep({ onVerified, onCancel }) {
     setStatus("Capturing photo...");
     try {
       const image = captureSnapshot(videoRef);
-      // Store photo log to backend (fire and forget)
       fetch(`${API}/api/face/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -50,7 +49,8 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       }).catch(() => {});
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-      onVerified();
+      setStatus("✅ Verified!");
+      setTimeout(onVerified, 1500);
     } catch (e) {
       setError(e.message);
       setStatus("📷 Look straight at the camera, then click Capture");
@@ -68,7 +68,18 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       <div className="flex justify-center w-full mb-4">
         <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium bg-black/60 text-white">{status}</div>
+          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium transition-colors ${
+            status.includes("✅") ? "bg-green-600 text-white" : "bg-black/60 text-white"
+          }`}>{status}</div>
+          {status.includes("✅") && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="bg-green-500 rounded-full p-4 shadow-lg animate-bounce">
+                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {error && <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>}
