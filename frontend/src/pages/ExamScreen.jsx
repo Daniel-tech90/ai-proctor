@@ -4,44 +4,68 @@ import React, { useState, useEffect, useCallback } from "react";
 function TermsModal({ exam, onAccept, onClose }) {
   const [checked, setChecked] = useState(false);
 
+  const terms = [
+    { icon: "🖥️", title: "Full-Screen Mode", desc: "The exam must be taken in full-screen. Exiting full-screen will be flagged and recorded." },
+    { icon: "🚫", title: "No Tab Switching", desc: "Do not switch tabs or open any other application. Every switch is logged as a violation." },
+    { icon: "✅", title: "Single Correct Answer", desc: "Each question has exactly one correct answer. Choose carefully before proceeding." },
+    { icon: "⏱️", title: "Auto-Submit on Timeout", desc: "The exam will auto-submit when the timer reaches zero. No extensions will be granted." },
+    { icon: "📵", title: "No Refresh or Navigation", desc: "Do not refresh, press back, or navigate away from the exam page during the test." },
+    { icon: "🔒", title: "Activity Monitoring", desc: "All activity is monitored by AI proctoring. Suspicious behavior will be reported to the examiner." },
+    { icon: "📶", title: "Stable Internet Required", desc: "Ensure a stable internet connection before starting. Disconnections may affect your submission." },
+    { icon: "📋", title: "No Return After Submission", desc: "Once submitted, you cannot re-attempt or review the exam. Submissions are final." },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative flex flex-col" style={{ maxHeight: "90vh" }}>
+        
+        {/* Header */}
+        <div className="bg-blue-600 rounded-t-2xl px-8 py-6 text-white">
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">📝</div>
+            <div>
+              <h2 className="text-xl font-bold">{exam.title}</h2>
+              <p className="text-blue-100 text-sm mt-0.5">{exam.subject} &nbsp;·&nbsp; {exam.duration} min &nbsp;·&nbsp; {exam.totalMarks} marks &nbsp;·&nbsp; {exam.questions?.length} questions</p>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">{exam.title}</h2>
-          <p className="text-gray-500 text-sm mt-1">{exam.subject} · {exam.duration} min · {exam.totalMarks} marks</p>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm text-gray-600 space-y-2 max-h-48 overflow-y-auto">
-          <p className="font-semibold text-gray-800">Terms & Conditions</p>
-          <p>1. The exam will run in <strong>full-screen mode</strong>. Exiting full-screen will be flagged.</p>
-          <p>2. Do <strong>not</strong> switch tabs or open other applications during the exam.</p>
-          <p>3. Each question has only <strong>one correct answer</strong>.</p>
-          <p>4. You cannot go back once you submit the exam.</p>
-          <p>5. The exam will <strong>auto-submit</strong> when the timer reaches zero.</p>
-          <p>6. Any suspicious activity will be <strong>recorded and reported</strong>.</p>
-          <p>7. Ensure stable internet connection before starting.</p>
-          <p>8. Do not refresh the page during the exam.</p>
+        {/* Terms */}
+        <div className="px-8 py-6 overflow-y-auto flex-1">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-1 h-5 bg-blue-600 rounded-full" />
+            <h3 className="font-bold text-gray-900 text-base">Instructions & Terms of Conduct</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {terms.map(({ icon, title, desc }) => (
+              <div key={title} className="flex gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="text-xl mt-0.5">{icon}</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">{title}</p>
+                  <p className="text-gray-500 text-xs mt-1 leading-relaxed">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <label className="flex items-center gap-3 mb-5 cursor-pointer">
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="w-4 h-4 accent-blue-600" />
-          <span className="text-sm text-gray-700">I have read and agree to the terms & conditions</span>
-        </label>
-
-        <button
-          disabled={!checked}
-          onClick={onAccept}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition"
-        >
-          Proceed to Exam →
-        </button>
+        {/* Footer */}
+        <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <label className="flex items-center gap-3 mb-4 cursor-pointer">
+            <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="w-4 h-4 accent-blue-600" />
+            <span className="text-sm text-gray-700">I have read, understood, and agree to all the terms & conditions above.</span>
+          </label>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">Cancel</button>
+            <button disabled={!checked} onClick={onAccept}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
+              Proceed to Exam →
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
