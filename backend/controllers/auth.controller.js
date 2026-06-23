@@ -102,5 +102,6 @@ exports.getAllUsers = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  res.json(req.user);
+  const user = await User.findById(req.user._id).select("-password");
+  res.json(user);
 };

@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
 const API = "https://ai-proctor-23da.onrender.com";
+const FACE_API = "https://ai-proctor-face.onrender.com";
+
+function captureSnapshot(videoRef) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 320; canvas.height = 240;
+  canvas.getContext("2d").drawImage(videoRef.current, 0, 0, 320, 240);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
 
 // ─── Face Capture Step ────────────────────────────────────────────────────────
 function FaceCaptureStep({ onVerified, onCancel }) {
@@ -29,9 +37,28 @@ function FaceCaptureStep({ onVerified, onCancel }) {
   const handleCapture = async () => {
     setVerifying(true);
     setError("");
-    setStatus("Verifying...");
+    setStatus("Detecting face...");
     try {
-      // TODO: replace with new API
+      const image = captureSnapshot(videoRef);
+
+      // Get stored descriptor
+      const meRes = await fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const meData = await meRes.json();
+
+      // Verify via face service
+      setStatus("Verifying...");
+      const faceRes = await fetch(`${FACE_API}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, descriptor: meData.faceDescriptor }),
+      });
+      const faceData = await faceRes.json();
+      if (!faceRes.ok) throw new Error(faceData.error);
+
+      if (videoRef.current?.srcObject)
+        videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       onVerified();
     } catch (e) {
       setError(e.message);

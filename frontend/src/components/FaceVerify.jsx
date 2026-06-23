@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 const API = "https://ai-proctor-23da.onrender.com";
+const FACE_API = "https://ai-proctor-face.onrender.com"; // face microservice
 
 function useCamera(videoRef) {
   const [ready, setReady] = useState(false);
@@ -22,6 +23,14 @@ function useCamera(videoRef) {
   }, []);
 
   return { ready, camError };
+}
+
+function captureSnapshot(videoRef) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 320;
+  canvas.height = 240;
+  canvas.getContext("2d").drawImage(videoRef.current, 0, 0, 320, 240);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 
 function CameraBox({ videoRef, status }) {
@@ -46,9 +55,29 @@ export function FaceRegister({ token, onDone }) {
 
   const handleSave = async () => {
     setSaving(true);
-    setStatus("Processing...");
+    setStatus("Detecting face...");
     try {
-      // TODO: integrate new face API here
+      const image = captureSnapshot(videoRef);
+
+      // Get descriptor from face service
+      const faceRes = await fetch(`${FACE_API}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+      });
+      const faceData = await faceRes.json();
+      if (!faceRes.ok) throw new Error(faceData.error);
+
+      // Save descriptor to backend
+      setStatus("Saving...");
+      const res = await fetch(`${API}/api/auth/register-face`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ faceDescriptor: faceData.descriptor }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
       setStatus("✅ Face registered!");
       setTimeout(onDone, 1000);
     } catch (e) {
@@ -86,9 +115,26 @@ export function FaceVerify({ token, onSuccess, onCancel }) {
   const handleVerify = async () => {
     setVerifying(true);
     setErrMsg("");
-    setStatus("Verifying...");
+    setStatus("Detecting face...");
     try {
-      // TODO: integrate new face API here
+      const image = captureSnapshot(videoRef);
+
+      // Get stored descriptor from backend
+      const meRes = await fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const meData = await meRes.json();
+
+      // Verify via face service
+      setStatus("Verifying...");
+      const faceRes = await fetch(`${FACE_API}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, descriptor: meData.faceDescriptor }),
+      });
+      const faceData = await faceRes.json();
+      if (!faceRes.ok) throw new Error(faceData.error);
+
       onSuccess();
     } catch (e) {
       setErrMsg(e.message);
