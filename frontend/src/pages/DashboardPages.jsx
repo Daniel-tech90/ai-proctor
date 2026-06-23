@@ -1,8 +1,56 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import EmptyState from "../components/EmptyState";
 
+const API = "https://ai-proctor-23da.onrender.com";
+
 export function Assessments() {
-  return <EmptyState title="No Categories Found" />;
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch_ = async () => {
+      try {
+        const res = await fetch(`${API}/api/exams`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        const data = await res.json();
+        setExams(Array.isArray(data) ? data : []);
+      } catch { setExams([]); }
+      finally { setLoading(false); }
+    };
+    fetch_();
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-400">Loading...</div>;
+  if (exams.length === 0) return <EmptyState title="No Categories Found" />;
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <h2 className="text-xl font-bold text-gray-800 mb-6">Assessments</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {exams.map((exam) => (
+          <div key={exam._id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-md transition relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-bl-full opacity-60" />
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">{exam.subject}</span>
+              <span className="text-xs text-gray-400">{exam.duration} min</span>
+            </div>
+            <h3 className="font-bold text-gray-900 text-base mb-2">{exam.title}</h3>
+            <p className="text-sm text-gray-500 mb-1">Total Marks: <span className="font-medium text-gray-700">{exam.totalMarks}</span></p>
+            <p className="text-sm text-gray-500 mb-4">Questions: <span className="font-medium text-gray-700">{exam.questions?.length || 0}</span></p>
+            {exam.scheduledAt && (
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+                <p className="text-xs text-green-700 font-medium">📅 {new Date(exam.scheduledAt).toLocaleString()}</p>
+              </div>
+            )}
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition">
+              Start Exam
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function Courses() {
