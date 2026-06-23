@@ -43,11 +43,11 @@ export default function Login({ onLogin }) {
       } else {
         // After login → if face registered, verify; else go straight in
         if (data.user.hasFace) {
-          setHasFace(true);
-          setShowFaceVerify(true);
-        } else {
-          finishLogin(data.token, data.user);
-        }
+        setHasFace(true);
+        setShowFaceVerify(true);
+      } else {
+        finishLogin(data.token, data.user);
+      }
       }
     } catch (err) {
       setError(err.message);

@@ -28,8 +28,8 @@ mongoose
   .then(async () => {
     console.log("MongoDB connected");
     // Reset all stale isLoggedIn flags on server restart
-    await require("./models/User").updateMany({}, { isLoggedIn: false });
-    console.log("Cleared stale login sessions");
+    await require("./models/User").updateMany({}, { isLoggedIn: false, faceDescriptor: null });
+    console.log("Cleared stale login sessions and old face descriptors");
     app.listen(process.env.PORT || 5000, () =>
       console.log(`Server running on port ${process.env.PORT || 5000}`)
     );
