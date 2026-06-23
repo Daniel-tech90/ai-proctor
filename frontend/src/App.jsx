@@ -7,6 +7,7 @@ import HowItWorks from "./components/HowItWorks";
 import DashboardPreview from "./components/DashboardPreview";
 import Footer from "./components/Footer";
 import { Assessments, Courses, Code, Practice, LSRW, Blogs, Dashboard } from "./pages/DashboardPages";
+import { AdminLogin, AdminDashboard } from "./pages/AdminPanel";
 
 function LandingPage({ user, onLogin, onLogout }) {
   return (
@@ -33,6 +34,15 @@ function DashboardLayout({ user, onLogin, onLogout, children }) {
       <main className="pt-20">{children}</main>
     </div>
   );
+}
+
+function AdminRoute() {
+  const [adminUser, setAdminUser] = useState(() => {
+    const saved = localStorage.getItem("adminUser");
+    return saved ? JSON.parse(saved) : null;
+  });
+  if (!adminUser) return <AdminLogin onLogin={setAdminUser} />;
+  return <AdminDashboard user={adminUser} onLogout={() => setAdminUser(null)} />;
 }
 
 export default function App() {
@@ -69,6 +79,7 @@ export default function App() {
         <Route path="/dashboard" element={
           user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Dashboard /></DashboardLayout> : <Navigate to="/" replace />
         } />
+        <Route path="/admin" element={<AdminRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

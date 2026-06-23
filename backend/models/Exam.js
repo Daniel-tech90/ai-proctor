@@ -15,6 +15,7 @@ const examSchema = new mongoose.Schema(
     questions: [questionSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isActive: { type: Boolean, default: true },
+    scheduledAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
