@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 const links = ["Home", "Features", "How It Works", "Dashboard", "Research", "Contact"];
 
-export default function Navbar() {
+export default function Navbar({ onLogin }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -13,7 +13,6 @@ export default function Navbar() {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
-
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
@@ -42,6 +41,7 @@ export default function Navbar() {
       setUser(data.user);
       setShowLogin(false);
       setForm({ email: "", password: "" });
+      if (onLogin) onLogin(data.user);
     } catch (err) {
       setError(err.message);
     } finally {
