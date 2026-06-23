@@ -2,59 +2,74 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 
 const MODELS_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 const API = "https://ai-proctor-23da.onrender.com";
-let faceApiLoaded = false;
 
-async function loadFaceApi() {
-  if (faceApiLoaded) return;
-  const faceapi = window.faceapi;
+const loadState = { detection: false, full: false };
+async function loadDetectionModel() {
+  if (loadState.detection) return;
+  await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
+  loadState.detection = true;
+}
+async function loadFullModels() {
+  if (loadState.full) return;
   await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
-    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
+    window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
+    window.faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
   ]);
-  faceApiLoaded = true;
+  loadState.full = true;
+}
+async function captureDescriptor(videoRef) {
+  await loadFullModels();
+  const result = await window.faceapi
+    .detectSingleFace(videoRef.current, new window.faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
+    .withFaceLandmarks(true)
+    .withFaceDescriptor();
+  if (!result) throw new Error("Could not capture face. Please try again.");
+  return Array.from(result.descriptor);
 }
 
 // ─── Face Capture Step ────────────────────────────────────────────────────────
 function FaceCaptureStep({ onVerified, onCancel }) {
   const videoRef = useRef(null);
-  const [status, setStatus] = useState("Loading face models...");
-  const [faceReady, setFaceReady] = useState(false);
-  const [descriptor, setDescriptor] = useState(null);
+  const [status, setStatus] = useState("Starting camera...");
+  const [faceFound, setFaceFound] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
+  const intervalRef = useRef(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    let interval;
     (async () => {
       try {
-        await loadFaceApi();
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStatus("Loading face detector...");
+        await loadDetectionModel();
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240, facingMode: "user" },
+        });
         if (videoRef.current) videoRef.current.srcObject = stream;
-        setStatus("Position your face clearly in the frame");
-        interval = setInterval(async () => {
+        setStatus("👤 Look straight at the camera...");
+
+        intervalRef.current = setInterval(async () => {
           if (!videoRef.current) return;
-          const faceapi = window.faceapi;
-          const result = await faceapi
-            .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks(true)
-            .withFaceDescriptor();
-          if (result) {
-            setDescriptor(Array.from(result.descriptor));
-            setFaceReady(true);
-            setStatus("✅ Face detected — click Capture & Proceed");
-          } else {
-            setFaceReady(false);
-            setStatus("👤 No face detected — look at the camera");
-          }
-        }, 800);
+          try {
+            const result = await window.faceapi.detectSingleFace(
+              videoRef.current,
+              new window.faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+            );
+            if (result) {
+              clearInterval(intervalRef.current);
+              setFaceFound(true);
+              setStatus("✅ Face detected — click Capture & Proceed");
+            } else {
+              setStatus("👤 No face detected — look straight at camera");
+            }
+          } catch {}
+        }, 1200);
       } catch {
-        setStatus("❌ Camera access denied. Please allow camera and retry.");
+        setStatus("❌ Camera access denied. Please allow camera.");
       }
     })();
     return () => {
-      clearInterval(interval);
+      clearInterval(intervalRef.current);
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
     };
@@ -64,6 +79,7 @@ function FaceCaptureStep({ onVerified, onCancel }) {
     setVerifying(true);
     setError("");
     try {
+      const descriptor = await captureDescriptor(videoRef);
       const res = await fetch(`${API}/api/auth/verify-face`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -71,7 +87,6 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      // stop camera then proceed
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       onVerified();
@@ -87,28 +102,23 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         <div className="w-1 h-5 bg-blue-600 rounded-full" />
         <h3 className="font-bold text-gray-900 text-base">Step 2 — Identity Verification</h3>
       </div>
-      <p className="text-sm text-gray-500 mb-5 self-start">Look directly at the camera. Your face will be matched against your registered profile before the exam begins.</p>
+      <p className="text-sm text-gray-500 mb-5 self-start">Look directly at the camera. Your face will be matched against your registered profile.</p>
 
       <div className="flex justify-center w-full mb-4">
-        <div className="relative rounded-2xl overflow-hidden bg-black" style={{ width: 320, height: 240 }}>
+        <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${
-            faceReady ? "bg-green-600 text-white" : "bg-black/60 text-white"
+          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium transition ${
+            faceFound ? "bg-green-600 text-white" : "bg-black/60 text-white"
           }`}>{status}</div>
         </div>
       </div>
 
-      {error && (
-        <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>
-      )}
+      {error && <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>}
 
       <div className="flex gap-3 w-full mt-2">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
-        <button
-          disabled={!faceReady || verifying}
-          onClick={handleCapture}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition"
-        >
+        <button disabled={!faceFound || verifying} onClick={handleCapture}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
           {verifying ? "Verifying..." : "📸 Capture & Proceed →"}
         </button>
       </div>
