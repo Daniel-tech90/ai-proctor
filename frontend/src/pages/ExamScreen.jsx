@@ -12,13 +12,28 @@ function captureSnapshot(videoRef) {
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
+// Check average brightness of the video frame (0-255)
+function getFrameBrightness(videoRef) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64; canvas.height = 48;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(videoRef.current, 0, 0, 64, 48);
+  const data = ctx.getImageData(0, 0, 64, 48).data;
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4)
+    total += (data[i] + data[i + 1] + data[i + 2]) / 3;
+  return total / (data.length / 4);
+}
+
 // ─── Face Capture Step ────────────────────────────────────────────────────────
 function FaceCaptureStep({ onVerified, onCancel }) {
   const videoRef = useRef(null);
   const [camReady, setCamReady] = useState(false);
   const [status, setStatus] = useState("Starting camera...");
+  const [lightOk, setLightOk] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
+  const brightnessRef = useRef(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -27,16 +42,33 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       .then((stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
         setCamReady(true);
-        setStatus("📷 Look straight at the camera, then click Capture");
+        setStatus("Checking lighting...");
+        // Check brightness every 600ms
+        brightnessRef.current = setInterval(() => {
+          if (!videoRef.current) return;
+          const brightness = getFrameBrightness(videoRef);
+          if (brightness < 60) {
+            setLightOk(false);
+            setStatus("🔦 Too dark — move to a brighter area");
+          } else if (brightness > 220) {
+            setLightOk(false);
+            setStatus("☀️ Too bright — reduce direct light on face");
+          } else {
+            setLightOk(true);
+            setStatus("✅ Good lighting — click Capture when ready");
+          }
+        }, 600);
       })
       .catch(() => setStatus("❌ Camera access denied. Please allow camera."));
     return () => {
+      clearInterval(brightnessRef.current);
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
   const handleCapture = async () => {
+    clearInterval(brightnessRef.current);
     setVerifying(true);
     setError("");
     setStatus("Capturing photo...");
@@ -47,7 +79,6 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ image }),
       }).catch(() => {});
-      // Simulate processing delay
       await new Promise((r) => setTimeout(r, 1000));
       setStatus("Analyzing face...");
       await new Promise((r) => setTimeout(r, 1200));
@@ -59,7 +90,7 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       setTimeout(onVerified, 1500);
     } catch (e) {
       setError(e.message);
-      setStatus("📷 Look straight at the camera, then click Capture");
+      setStatus("✅ Good lighting — click Capture when ready");
       setVerifying(false);
     }
   };
@@ -86,7 +117,9 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
           <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium transition-colors ${
-            status.includes("✅") ? "bg-green-600 text-white" : "bg-black/60 text-white"
+            status.includes("✅") ? "bg-green-600 text-white" :
+            status.includes("🔦") || status.includes("☀️") ? "bg-amber-500 text-white" :
+            "bg-black/60 text-white"
           }`}>{status}</div>
           {status.includes("✅") && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -102,7 +135,7 @@ function FaceCaptureStep({ onVerified, onCancel }) {
       {error && <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>}
       <div className="flex gap-3 w-full mt-2">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
-        <button disabled={!camReady || verifying} onClick={handleCapture}
+        <button disabled={!camReady || !lightOk || verifying} onClick={handleCapture}
           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
           {verifying ? "Processing..." : "📸 Take Photo & Start Exam →"}
         </button>
