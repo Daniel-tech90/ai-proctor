@@ -248,7 +248,7 @@ export function AdminDashboard({ user, onLogout }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Name", "Email", "Role", "Registered", "Last Login"].map((h) => (
+                  {["Name", "Email", "Role", "Registered", "Last Login", "IP Address"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                   ))}
                 </tr>
@@ -273,6 +273,13 @@ export function AdminDashboard({ user, onLogout }) {
                         <span className="text-xs text-indigo-600 font-medium">{new Date(u.lastLoginAt).toLocaleString()}</span>
                       ) : (
                         <span className="text-xs text-gray-400">Never</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.lastLoginIp ? (
+                        <span className="text-xs font-mono bg-gray-100 text-gray-700 px-2 py-1 rounded">{u.lastLoginIp}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
                   </tr>

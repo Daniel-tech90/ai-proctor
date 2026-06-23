@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["student", "proctor", "admin"], default: "student" },
     avatar: { type: String, default: "" },
     lastLoginAt: { type: Date, default: null },
+    lastLoginIp: { type: String, default: null },
   },
   { timestamps: true }
 );
