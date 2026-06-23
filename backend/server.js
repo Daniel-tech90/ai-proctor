@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", true);
 
 // Middleware
 app.use(cors({ origin: ["http://localhost:3000", "https://dinesh.vercel.app", "https://ai-dinesh.vercel.app"], credentials: true }));

@@ -24,8 +24,13 @@ exports.login = async (req, res) => {
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ message: "Invalid credentials" });
 
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() 
+      || req.headers["x-real-ip"] 
+      || req.connection?.remoteAddress 
+      || req.socket?.remoteAddress 
+      || "Unknown";
     user.lastLoginAt = new Date();
-    user.lastLoginIp = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "Unknown";
+    user.lastLoginIp = ip;
     await user.save();
 
     res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
