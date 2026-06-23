@@ -184,10 +184,10 @@ export default function ExamScreen({ exam, onFinish }) {
             <p className="text-xs text-gray-400">Answered</p>
             <p className="font-bold text-green-400">{answered}/{total}</p>
           </div>
-          {violations > 0 && (
+          {(tabSwitches + fullscreenExits) > 0 && (
             <div className="text-center">
               <p className="text-xs text-gray-400">Violations</p>
-              <p className="font-bold text-red-400">{violations}</p>
+              <p className="font-bold text-red-400">{tabSwitches + fullscreenExits}</p>
             </div>
           )}
           <div className={`text-center px-4 py-2 rounded-xl ${timeLeft < 60 ? "bg-red-600 animate-pulse" : "bg-blue-600"}`}>

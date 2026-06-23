@@ -25,7 +25,13 @@ export function Assessments() {
     fetch_();
   }, []);
 
-  if (inExam && selectedExam) return <ExamScreen exam={selectedExam} onFinish={() => { setInExam(false); setSelectedExam(null); }} />;
+  if (inExam && selectedExam) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900">
+        <ExamScreen exam={selectedExam} onFinish={() => { setInExam(false); setSelectedExam(null); }} />
+      </div>
+    );
+  }
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-400">Loading...</div>;
   if (exams.length === 0) return <EmptyState title="No Categories Found" />;
