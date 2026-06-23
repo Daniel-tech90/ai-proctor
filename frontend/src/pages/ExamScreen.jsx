@@ -142,6 +142,7 @@ export default function ExamScreen({ exam, onFinish }) {
   const q = exam.questions[current];
   const total = exam.questions.length;
   const answered = Object.keys(answers).length;
+  const username = JSON.parse(localStorage.getItem("user") || "{}").name || "Student";
 
   // ─── Result Screen ────────────────────────────────────────────────────────
   if (submitted) {
@@ -172,7 +173,13 @@ export default function ExamScreen({ exam, onFinish }) {
 
   // ─── Exam UI ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+    <div className="min-h-screen bg-white text-gray-900 flex flex-col relative overflow-hidden">
+      {/* Watermark username */}
+      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center select-none">
+        <p className="text-gray-200 font-bold text-6xl rotate-[-30deg] whitespace-nowrap">
+          {username}
+        </p>
+      </div>
       {/* Header */}
       <div className="bg-white px-6 py-3 flex items-center justify-between border-b border-gray-200">
         <div>
