@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import EmptyState from "../components/EmptyState";
+import ExamScreen, { TermsModal } from "./ExamScreen";
 
 const API = "https://ai-proctor-23da.onrender.com";
 
 export function Assessments() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedExam, setSelectedExam] = useState(null);
+  const [showTerms, setShowTerms] = useState(false);
+  const [inExam, setInExam] = useState(false);
 
   useEffect(() => {
     const fetch_ = async () => {
@@ -20,6 +24,8 @@ export function Assessments() {
     };
     fetch_();
   }, []);
+
+  if (inExam && selectedExam) return <ExamScreen exam={selectedExam} onFinish={() => { setInExam(false); setSelectedExam(null); }} />;
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-400">Loading...</div>;
   if (exams.length === 0) return <EmptyState title="No Categories Found" />;
@@ -43,12 +49,22 @@ export function Assessments() {
                 <p className="text-xs text-green-700 font-medium">📅 {new Date(exam.scheduledAt).toLocaleString()}</p>
               </div>
             )}
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition">
+            <button
+              onClick={() => { setSelectedExam(exam); setShowTerms(true); }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition">
               Start Exam
             </button>
           </div>
         ))}
       </div>
+
+      {showTerms && selectedExam && (
+        <TermsModal
+          exam={selectedExam}
+          onClose={() => { setShowTerms(false); setSelectedExam(null); }}
+          onAccept={() => { setShowTerms(false); setInExam(true); }}
+        />
+      )}
     </div>
   );
 }
