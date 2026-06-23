@@ -47,6 +47,12 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ image }),
       }).catch(() => {});
+      // Simulate processing delay
+      await new Promise((r) => setTimeout(r, 1000));
+      setStatus("Analyzing face...");
+      await new Promise((r) => setTimeout(r, 1200));
+      setStatus("Verifying identity...");
+      await new Promise((r) => setTimeout(r, 1000));
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       setStatus("✅ Verified!");
