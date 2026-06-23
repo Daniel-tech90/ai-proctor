@@ -20,6 +20,8 @@ const sessionSchema = new mongoose.Schema(
     aiConfidenceScore: { type: Number, default: 100 },
     integrityScore: { type: Number, default: 100 },
     score: Number,
+    tabSwitches: { type: Number, default: 0 },
+    fullscreenExits: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

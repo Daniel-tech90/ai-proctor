@@ -1,5 +1,29 @@
 const ExamSession = require("../models/ExamSession");
 
+exports.getAllSessions = async (req, res) => {
+  try {
+    const sessions = await ExamSession.find({ status: "completed" })
+      .populate("student", "name email")
+      .populate("exam", "title subject")
+      .sort({ endedAt: -1 });
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getAllSessions = async (req, res) => {
+  try {
+    const sessions = await ExamSession.find({ status: "completed" })
+      .populate("student", "name email")
+      .populate("exam", "title subject")
+      .sort({ endedAt: -1 });
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.startSession = async (req, res) => {
   try {
     const existing = await ExamSession.findOne({ student: req.user._id, exam: req.body.examId, status: "active" });
@@ -37,6 +61,8 @@ exports.submitSession = async (req, res) => {
     session.answers = req.body.answers;
     session.endedAt = new Date();
     session.status = "completed";
+    session.tabSwitches = req.body.tabSwitches || 0;
+    session.fullscreenExits = req.body.fullscreenExits || 0;
 
     // Auto-grade
     let score = 0;

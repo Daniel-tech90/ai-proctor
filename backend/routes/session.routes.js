@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { startSession, logAlert, submitSession, getSessionById } = require("../controllers/session.controller");
-const { protect } = require("../middleware/auth");
+const { startSession, logAlert, submitSession, getSessionById, getAllSessions } = require("../controllers/session.controller");
+const { protect, authorize } = require("../middleware/auth");
 
+router.get("/", protect, authorize("admin", "proctor"), getAllSessions);
 router.post("/start", protect, startSession);
 router.get("/:id", protect, getSessionById);
 router.post("/:id/alert", protect, logAlert);

@@ -54,7 +54,27 @@ export default function ExamScreen({ exam, onFinish }) {
   const [timeLeft, setTimeLeft] = useState(exam.duration * 60);
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
-  const [violations, setViolations] = useState(0);
+  const [tabSwitches, setTabSwitches] = useState(0);
+  const [fullscreenExits, setFullscreenExits] = useState(0);
+  const [sessionId, setSessionId] = useState(null);
+  const token = localStorage.getItem("token");
+  const API = "https://ai-proctor-23da.onrender.com";
+
+  // Start session on mount
+  useEffect(() => {
+    const start = async () => {
+      try {
+        const res = await fetch(`${API}/api/sessions/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ examId: exam._id }),
+        });
+        const data = await res.json();
+        setSessionId(data._id);
+      } catch {}
+    };
+    start();
+  }, []);
 
   // Fullscreen
   useEffect(() => {
@@ -67,7 +87,7 @@ export default function ExamScreen({ exam, onFinish }) {
   useEffect(() => {
     const handler = () => {
       if (!document.fullscreenElement && !submitted) {
-        setViolations((v) => v + 1);
+        setFullscreenExits((v) => v + 1);
         alert("⚠️ Warning: You exited full-screen! This has been recorded.");
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
       }
@@ -80,7 +100,7 @@ export default function ExamScreen({ exam, onFinish }) {
   useEffect(() => {
     const handler = () => {
       if (document.hidden && !submitted) {
-        setViolations((v) => v + 1);
+        setTabSwitches((v) => v + 1);
       }
     };
     document.addEventListener("visibilitychange", handler);
@@ -88,13 +108,27 @@ export default function ExamScreen({ exam, onFinish }) {
   }, [submitted]);
 
   // Timer
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     let correct = 0;
     exam.questions.forEach((q, i) => { if (answers[i] === q.answer) correct++; });
     setScore(correct);
     setSubmitted(true);
     if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
-  }, [answers, exam.questions]);
+    // Save to backend
+    if (sessionId) {
+      try {
+        await fetch(`${API}/api/sessions/${sessionId}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            answers: Object.entries(answers).map(([qi, opt]) => ({ questionIndex: Number(qi), selectedOption: opt })),
+            tabSwitches,
+            fullscreenExits,
+          }),
+        });
+      } catch {}
+    }
+  }, [answers, exam.questions, sessionId, tabSwitches, fullscreenExits, token]);
 
   useEffect(() => {
     if (submitted) return;
@@ -120,8 +154,8 @@ export default function ExamScreen({ exam, onFinish }) {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Exam Submitted!</h2>
           <p className="text-gray-500 text-sm mb-6">{exam.title}</p>
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {[["Score", `${score}/${total}`], ["Accuracy", `${pct}%`], ["Violations", violations]].map(([label, val]) => (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[["Score", `${score}/${total}`], ["Accuracy", `${Math.round((score / total) * 100)}%`], ["Tab Switches", tabSwitches], ["Fullscreen Exits", fullscreenExits]].map(([label, val]) => (
               <div key={label} className="bg-gray-50 rounded-xl p-3">
                 <p className="text-lg font-bold text-blue-600">{val}</p>
                 <p className="text-xs text-gray-500">{label}</p>

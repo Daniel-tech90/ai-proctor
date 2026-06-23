@@ -160,9 +160,18 @@ function CreateExamModal({ onClose, onCreated }) {
 export function AdminDashboard({ user, onLogout }) {
   const [exams, setExams] = useState([]);
   const [users, setUsers] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("exams");
+
+  const fetchSessions = async () => {
+    try {
+      const res = await fetch(`${API}/api/sessions`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const data = await res.json();
+      setSessions(Array.isArray(data) ? data : []);
+    } catch { setSessions([]); }
+  };
 
   const fetchExams = async () => {
     setLoading(true);
@@ -182,7 +191,7 @@ export function AdminDashboard({ user, onLogout }) {
     } catch { setUsers([]); }
   };
 
-  useEffect(() => { fetchExams(); fetchUsers(); }, []);
+  useEffect(() => { fetchExams(); fetchUsers(); fetchSessions(); }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Deactivate this exam?")) return;
@@ -196,7 +205,7 @@ export function AdminDashboard({ user, onLogout }) {
     onLogout();
   };
 
-  const tabs = ["exams", "schedule", "users"];
+  const tabs = ["exams", "schedule", "users", "violations"];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -234,7 +243,7 @@ export function AdminDashboard({ user, onLogout }) {
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition ${tab === t ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled Exams" : "Login Activity"}
+              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled Exams" : t === "users" ? "Login Activity" : "Violations"}
             </button>
           ))}
           <button onClick={() => setShowCreate(true)} className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
@@ -244,7 +253,40 @@ export function AdminDashboard({ user, onLogout }) {
 
         {/* Exam List / Users */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {tab === "users" ? (
+          {tab === "violations" ? (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {["Student", "Email", "Exam", "Score", "Tab Switches", "Fullscreen Exits", "Submitted At"].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {sessions.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No exam sessions found</td></tr>
+                ) : sessions.map((s) => (
+                  <tr key={s._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{s.student?.name || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{s.student?.email || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">{s.exam?.title || "—"}</td>
+                    <td className="px-4 py-3 font-semibold text-blue-600">{s.score ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                        s.tabSwitches > 0 ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+                      }`}>{s.tabSwitches || 0}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                        s.fullscreenExits > 0 ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600"
+                      }`}>{s.fullscreenExits || 0}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{s.endedAt ? new Date(s.endedAt).toLocaleString() : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : tab === "users" ? (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
