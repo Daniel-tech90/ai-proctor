@@ -82,25 +82,27 @@ function FaceCaptureStep({ onVerified, onCancel }) {
   };
 
   return (
-    <div className="px-8 py-6 flex flex-col items-center">
-      <div className="flex items-center gap-2 mb-5 self-start">
+    <div className="overflow-y-auto flex-1 px-8 py-6 flex flex-col items-center">
+      <div className="flex items-center gap-2 mb-4 self-start">
         <div className="w-1 h-5 bg-blue-600 rounded-full" />
         <h3 className="font-bold text-gray-900 text-base">Step 2 — Identity Verification</h3>
       </div>
-      <p className="text-sm text-gray-500 mb-4 self-start">Look directly at the camera. Your face will be matched against your registered profile before the exam begins.</p>
+      <p className="text-sm text-gray-500 mb-5 self-start">Look directly at the camera. Your face will be matched against your registered profile before the exam begins.</p>
 
-      <div className="relative rounded-2xl overflow-hidden bg-black w-full mb-4" style={{ aspectRatio: "4/3", maxHeight: 280 }}>
-        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${
-          faceReady ? "bg-green-600 text-white" : "bg-black/60 text-white"
-        }`}>{status}</div>
+      <div className="flex justify-center w-full mb-4">
+        <div className="relative rounded-2xl overflow-hidden bg-black" style={{ width: 320, height: 240 }}>
+          <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${
+            faceReady ? "bg-green-600 text-white" : "bg-black/60 text-white"
+          }`}>{status}</div>
+        </div>
       </div>
 
       {error && (
         <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>
       )}
 
-      <div className="flex gap-3 w-full">
+      <div className="flex gap-3 w-full mt-2">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
         <button
           disabled={!faceReady || verifying}
@@ -132,8 +134,8 @@ function TermsModal({ exam, onAccept, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative flex flex-col" style={{ maxHeight: "90vh" }}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center px-4 py-6 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative flex flex-col my-auto">
         
         {/* Header */}
         <div className="bg-blue-600 rounded-t-2xl px-8 py-6 text-white">

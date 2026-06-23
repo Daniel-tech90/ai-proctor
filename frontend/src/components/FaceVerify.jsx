@@ -89,15 +89,17 @@ export function FaceRegister({ token, onDone }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center px-4 py-8 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-auto">
         <h2 className="text-xl font-bold text-gray-900 mb-1">Register Your Face</h2>
         <p className="text-sm text-gray-500 mb-5">This is used to verify your identity during exams.</p>
 
-        <div className="relative rounded-xl overflow-hidden bg-black mb-4" style={{ aspectRatio: "4/3" }}>
-          <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${ready ? "bg-green-600 text-white" : "bg-black/60 text-white"}`}>
-            {status}
+        <div className="flex justify-center mb-4">
+          <div className="relative rounded-xl overflow-hidden bg-black" style={{ width: 320, height: 240 }}>
+            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${ready ? "bg-green-600 text-white" : "bg-black/60 text-white"}`}>
+              {status}
+            </div>
           </div>
         </div>
 
@@ -145,15 +147,17 @@ export function FaceVerify({ token, onSuccess, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center px-4 py-8 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-auto">
         <h2 className="text-xl font-bold text-gray-900 mb-1">Face Verification</h2>
         <p className="text-sm text-gray-500 mb-5">Look at the camera to verify your identity.</p>
 
-        <div className="relative rounded-xl overflow-hidden bg-black mb-4" style={{ aspectRatio: "4/3" }}>
-          <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${ready ? "bg-green-600 text-white" : "bg-black/60 text-white"}`}>
-            {status}
+        <div className="flex justify-center mb-4">
+          <div className="relative rounded-xl overflow-hidden bg-black" style={{ width: 320, height: 240 }}>
+            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${ready ? "bg-green-600 text-white" : "bg-black/60 text-white"}`}>
+              {status}
+            </div>
           </div>
         </div>
 
