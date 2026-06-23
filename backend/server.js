@@ -24,8 +24,11 @@ app.get("/api/health", (req, res) => res.json({ status: "OK", message: "AI Proct
 // MongoDB connection + server start
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("MongoDB connected");
+    // Reset all stale isLoggedIn flags on server restart
+    await require("./models/User").updateMany({}, { isLoggedIn: false });
+    console.log("Cleared stale login sessions");
     app.listen(process.env.PORT || 5000, () =>
       console.log(`Server running on port ${process.env.PORT || 5000}`)
     );

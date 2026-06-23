@@ -24,8 +24,14 @@ exports.login = async (req, res) => {
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ message: "Invalid credentials" });
 
-    if (user.isLoggedIn)
-      return res.status(403).json({ message: "Account is already logged in from another session." });
+    if (user.isLoggedIn) {
+      // Allow re-login if last session is older than 2 hours (stale session)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      if (user.lastLoginAt && user.lastLoginAt > twoHoursAgo) {
+        return res.status(403).json({ message: "Account is already logged in from another session." });
+      }
+      // Stale session — auto clear
+    }
 
     const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim()
       || req.headers["x-real-ip"]
