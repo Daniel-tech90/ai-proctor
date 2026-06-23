@@ -64,7 +64,18 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         <div className="w-1 h-5 bg-blue-600 rounded-full" />
         <h3 className="font-bold text-gray-900 text-base">Step 2 — Identity Verification</h3>
       </div>
-      <p className="text-sm text-gray-500 mb-5 self-start">Look directly at the camera, then click Capture & Proceed.</p>
+      <p className="text-sm text-gray-500 mb-4 self-start">Look directly at the camera, then click Capture & Proceed.</p>
+
+      {/* Warning box */}
+      <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex gap-3">
+        <span className="text-lg">⚠️</span>
+        <div className="text-xs text-amber-800 space-y-1">
+          <p className="font-semibold">Before capturing, make sure:</p>
+          <p>• Your face is <strong>clearly visible</strong> and centered in the frame</p>
+          <p>• You are in a <strong>well-lit area</strong> — avoid sitting with light behind you</p>
+          <p>• Remove glasses, mask or anything covering your face</p>
+        </div>
+      </div>
       <div className="flex justify-center w-full mb-4">
         <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ width: 320, height: 240 }}>
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
