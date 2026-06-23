@@ -1,8 +1,124 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+
+const MODELS_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+const API = "https://ai-proctor-23da.onrender.com";
+let faceApiLoaded = false;
+
+async function loadFaceApi() {
+  if (faceApiLoaded) return;
+  const faceapi = window.faceapi;
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
+  ]);
+  faceApiLoaded = true;
+}
+
+// ─── Face Capture Step ────────────────────────────────────────────────────────
+function FaceCaptureStep({ onVerified, onCancel }) {
+  const videoRef = useRef(null);
+  const [status, setStatus] = useState("Loading face models...");
+  const [faceReady, setFaceReady] = useState(false);
+  const [descriptor, setDescriptor] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    let interval;
+    (async () => {
+      try {
+        await loadFaceApi();
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setStatus("Position your face clearly in the frame");
+        interval = setInterval(async () => {
+          if (!videoRef.current) return;
+          const faceapi = window.faceapi;
+          const result = await faceapi
+            .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks(true)
+            .withFaceDescriptor();
+          if (result) {
+            setDescriptor(Array.from(result.descriptor));
+            setFaceReady(true);
+            setStatus("✅ Face detected — click Capture & Proceed");
+          } else {
+            setFaceReady(false);
+            setStatus("👤 No face detected — look at the camera");
+          }
+        }, 800);
+      } catch {
+        setStatus("❌ Camera access denied. Please allow camera and retry.");
+      }
+    })();
+    return () => {
+      clearInterval(interval);
+      if (videoRef.current?.srcObject)
+        videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const handleCapture = async () => {
+    setVerifying(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/auth/verify-face`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ faceDescriptor: descriptor }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      // stop camera then proceed
+      if (videoRef.current?.srcObject)
+        videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+      onVerified();
+    } catch (e) {
+      setError(e.message);
+      setVerifying(false);
+    }
+  };
+
+  return (
+    <div className="px-8 py-6 flex flex-col items-center">
+      <div className="flex items-center gap-2 mb-5 self-start">
+        <div className="w-1 h-5 bg-blue-600 rounded-full" />
+        <h3 className="font-bold text-gray-900 text-base">Step 2 — Identity Verification</h3>
+      </div>
+      <p className="text-sm text-gray-500 mb-4 self-start">Look directly at the camera. Your face will be matched against your registered profile before the exam begins.</p>
+
+      <div className="relative rounded-2xl overflow-hidden bg-black w-full mb-4" style={{ aspectRatio: "4/3", maxHeight: 280 }}>
+        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+        <div className={`absolute inset-x-0 bottom-0 text-center text-xs py-2 font-medium ${
+          faceReady ? "bg-green-600 text-white" : "bg-black/60 text-white"
+        }`}>{status}</div>
+      </div>
+
+      {error && (
+        <div className="w-full bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>
+      )}
+
+      <div className="flex gap-3 w-full">
+        <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
+        <button
+          disabled={!faceReady || verifying}
+          onClick={handleCapture}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition"
+        >
+          {verifying ? "Verifying..." : "📸 Capture & Proceed →"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── Terms & Conditions Modal ─────────────────────────────────────────────────
 function TermsModal({ exam, onAccept, onClose }) {
   const [checked, setChecked] = useState(false);
+  const [step, setStep] = useState(1); // 1 = terms, 2 = face verify
 
   const terms = [
     { icon: "🖥️", title: "Full-Screen Mode", desc: "The exam must be taken in full-screen. Exiting full-screen will be flagged and recorded." },
@@ -31,41 +147,62 @@ function TermsModal({ exam, onAccept, onClose }) {
               <p className="text-blue-100 text-sm mt-0.5">{exam.subject} &nbsp;·&nbsp; {exam.duration} min &nbsp;·&nbsp; {exam.totalMarks} marks &nbsp;·&nbsp; {exam.questions?.length} questions</p>
             </div>
           </div>
-        </div>
-
-        {/* Terms */}
-        <div className="px-8 py-6 overflow-y-auto flex-1">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-5 bg-blue-600 rounded-full" />
-            <h3 className="font-bold text-gray-900 text-base">Instructions & Terms of Conduct</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {terms.map(({ icon, title, desc }) => (
-              <div key={title} className="flex gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <span className="text-xl mt-0.5">{icon}</span>
-                <div>
-                  <p className="font-semibold text-gray-800 text-sm">{title}</p>
-                  <p className="text-gray-500 text-xs mt-1 leading-relaxed">{desc}</p>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mt-4">
+            {["Terms & Conditions", "Face Verification"].map((label, i) => (
+              <React.Fragment key={label}>
+                <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${
+                  step === i + 1 ? "bg-white text-blue-600" : step > i + 1 ? "bg-green-400 text-white" : "bg-white/20 text-white/70"
+                }`}>
+                  <span>{step > i + 1 ? "✓" : i + 1}</span>
+                  <span>{label}</span>
                 </div>
-              </div>
+                {i === 0 && <div className="flex-1 h-px bg-white/30" />}
+              </React.Fragment>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-          <label className="flex items-center gap-3 mb-4 cursor-pointer">
-            <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="w-4 h-4 accent-blue-600" />
-            <span className="text-sm text-gray-700">I have read, understood, and agree to all the terms & conditions above.</span>
-          </label>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">Cancel</button>
-            <button disabled={!checked} onClick={onAccept}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
-              Proceed to Exam →
-            </button>
-          </div>
-        </div>
+        {/* Step 1 — Terms */}
+        {step === 1 && (
+          <>
+            <div className="px-8 py-6 overflow-y-auto flex-1">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-1 h-5 bg-blue-600 rounded-full" />
+                <h3 className="font-bold text-gray-900 text-base">Instructions & Terms of Conduct</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {terms.map(({ icon, title, desc }) => (
+                  <div key={title} className="flex gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <span className="text-xl mt-0.5">{icon}</span>
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{title}</p>
+                      <p className="text-gray-500 text-xs mt-1 leading-relaxed">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              <label className="flex items-center gap-3 mb-4 cursor-pointer">
+                <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="w-4 h-4 accent-blue-600" />
+                <span className="text-sm text-gray-700">I have read, understood, and agree to all the terms & conditions above.</span>
+              </label>
+              <div className="flex gap-3">
+                <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">Cancel</button>
+                <button disabled={!checked} onClick={() => setStep(2)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
+                  Next: Verify Identity →
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Step 2 — Face Capture */}
+        {step === 2 && (
+          <FaceCaptureStep onVerified={onAccept} onCancel={() => setStep(1)} />
+        )}
       </div>
     </div>
   );
