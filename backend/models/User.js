@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6 },
     role: { type: String, enum: ["student", "proctor", "admin"], default: "student" },
     avatar: { type: String, default: "" },
+    lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

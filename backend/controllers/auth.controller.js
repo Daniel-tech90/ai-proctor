@@ -24,7 +24,19 @@ exports.login = async (req, res) => {
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ message: "Invalid credentials" });
 
+    user.lastLoginAt = new Date();
+    await user.save();
+
     res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ lastLoginAt: -1 });
+    res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

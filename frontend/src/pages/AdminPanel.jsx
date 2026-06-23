@@ -159,6 +159,7 @@ function CreateExamModal({ onClose, onCreated }) {
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export function AdminDashboard({ user, onLogout }) {
   const [exams, setExams] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("exams");
@@ -173,7 +174,15 @@ export function AdminDashboard({ user, onLogout }) {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchExams(); }, []);
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/users`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch { setUsers([]); }
+  };
+
+  useEffect(() => { fetchExams(); fetchUsers(); }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Deactivate this exam?")) return;
@@ -187,7 +196,7 @@ export function AdminDashboard({ user, onLogout }) {
     onLogout();
   };
 
-  const tabs = ["exams", "schedule"];
+  const tabs = ["exams", "schedule", "users"];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -225,7 +234,7 @@ export function AdminDashboard({ user, onLogout }) {
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition ${tab === t ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-              {t === "exams" ? "All Exams" : "Scheduled Exams"}
+              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled Exams" : "Login Activity"}
             </button>
           ))}
           <button onClick={() => setShowCreate(true)} className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
@@ -233,9 +242,44 @@ export function AdminDashboard({ user, onLogout }) {
           </button>
         </div>
 
-        {/* Exam List */}
+        {/* Exam List / Users */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {loading ? (
+          {tab === "users" ? (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {["Name", "Email", "Role", "Registered", "Last Login"].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {users.length === 0 ? (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No users found</td></tr>
+                ) : users.map((u) => (
+                  <tr key={u._id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
+                        u.role === "admin" ? "bg-red-50 text-red-600" :
+                        u.role === "proctor" ? "bg-yellow-50 text-yellow-600" :
+                        "bg-green-50 text-green-600"
+                      }`}>{u.role}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{new Date(u.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      {u.lastLoginAt ? (
+                        <span className="text-xs text-indigo-600 font-medium">{new Date(u.lastLoginAt).toLocaleString()}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Never</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : loading ? (
             <div className="p-12 text-center text-gray-400">Loading...</div>
           ) : exams.length === 0 ? (
             <div className="p-12 text-center text-gray-400">No exams found. Create one!</div>
