@@ -38,7 +38,7 @@ export function Dashboard() {
       {/* Top Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* User Info Card */}
-        <div className="md:col-span-2 bg-blue-700 rounded-2xl p-6 text-white">
+        <div className="md:col-span-2 bg-[#1a3a6b] rounded-2xl p-6 text-white">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <h2 className="text-xl font-bold mb-1">Welcome {user.name?.toUpperCase()}</h2>
@@ -58,7 +58,7 @@ export function Dashboard() {
         </div>
 
         {/* Overall Accuracy */}
-        <div className="bg-blue-700 rounded-2xl p-6 text-white">
+        <div className="bg-[#1a3a6b] rounded-2xl p-6 text-white">
           <h3 className="text-lg font-semibold mb-4">Your Overall Accuracy</h3>
           <div className="flex justify-between text-sm mb-2">
             <span></span>
