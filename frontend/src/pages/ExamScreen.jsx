@@ -342,7 +342,7 @@ export default function ExamScreen({ exam, onFinish }) {
         </div>
         <div className="flex items-center gap-4">
           {/* Live camera feed */}
-          <div className="relative rounded-xl overflow-hidden bg-gray-900 border-2 border-green-500" style={{ width: 80, height: 60 }}>
+          <div className="relative rounded-xl overflow-hidden bg-gray-900 border-2 border-green-500" style={{ width: 120, height: 90 }}>
             <video ref={camRef} autoPlay muted playsInline className="w-full h-full object-cover" />
             <div className="absolute top-1 left-1 flex items-center gap-1">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
