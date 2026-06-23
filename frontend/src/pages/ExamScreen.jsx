@@ -237,12 +237,7 @@ export default function ExamScreen({ exam, onFinish }) {
     start();
   }, []);
 
-  // Fullscreen
-  useEffect(() => {
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    return () => { if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen(); };
-  }, []);
+  // Fullscreen already triggered before exam starts (after face verification)
 
   // Detect fullscreen exit
   useEffect(() => {

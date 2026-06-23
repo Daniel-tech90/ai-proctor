@@ -68,7 +68,11 @@ export function Assessments() {
         <TermsModal
           exam={selectedExam}
           onClose={() => { setShowTerms(false); setSelectedExam(null); }}
-          onAccept={() => { setShowTerms(false); setInExam(true); }}
+          onAccept={() => {
+            setShowTerms(false);
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            setInExam(true);
+          }}
         />
       )}
     </div>
