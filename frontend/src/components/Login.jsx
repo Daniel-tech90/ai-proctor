@@ -38,16 +38,9 @@ export default function Login({ onLogin }) {
       setTempUser(data.user);
 
       if (tab === "register") {
-        // After register → prompt face registration
         setShowFaceRegister(true);
       } else {
-        // After login → if face registered, verify; else go straight in
-        if (data.user.hasFace) {
-        setHasFace(true);
-        setShowFaceVerify(true);
-      } else {
         finishLogin(data.token, data.user);
-      }
       }
     } catch (err) {
       setError(err.message);

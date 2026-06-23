@@ -39,19 +39,15 @@ function FaceCaptureStep({ onVerified, onCancel }) {
   const handleCapture = async () => {
     setVerifying(true);
     setError("");
-    setStatus("Detecting face...");
+    setStatus("Capturing photo...");
     try {
       const image = captureSnapshot(videoRef);
-
-      setStatus("Verifying...");
-      const res = await fetch(`${API}/api/face/verify`, {
+      // Store photo log to backend (fire and forget)
+      fetch(`${API}/api/face/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ image }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
+      }).catch(() => {});
       if (videoRef.current?.srcObject)
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       onVerified();
@@ -80,7 +76,7 @@ function FaceCaptureStep({ onVerified, onCancel }) {
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">← Back</button>
         <button disabled={!camReady || verifying} onClick={handleCapture}
           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition">
-          {verifying ? "Verifying..." : "📸 Capture & Proceed →"}
+          {verifying ? "Processing..." : "📸 Take Photo & Start Exam →"}
         </button>
       </div>
     </div>
