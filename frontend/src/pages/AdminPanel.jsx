@@ -164,6 +164,8 @@ export function AdminDashboard({ user, onLogout }) {
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("exams");
+  const [messages, setMessages] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchSessions = async () => {
     try {
@@ -171,6 +173,22 @@ export function AdminDashboard({ user, onLogout }) {
       const data = await res.json();
       setSessions(Array.isArray(data) ? data : []);
     } catch { setSessions([]); }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch(`${API}/api/messages`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const data = await res.json();
+      const msgs = Array.isArray(data) ? data : [];
+      setMessages(msgs);
+      setUnreadCount(msgs.filter((m) => !m.read).length);
+    } catch { setMessages([]); }
+  };
+
+  const markRead = async (id) => {
+    await fetch(`${API}/api/messages/${id}/read`, { method: "PATCH", headers: { Authorization: `Bearer ${getToken()}` } }).catch(() => {});
+    setMessages((prev) => prev.map((m) => m._id === id ? { ...m, read: true } : m));
+    setUnreadCount((v) => Math.max(0, v - 1));
   };
 
   const fetchExams = async () => {
@@ -191,7 +209,7 @@ export function AdminDashboard({ user, onLogout }) {
     } catch { setUsers([]); }
   };
 
-  useEffect(() => { fetchExams(); fetchUsers(); fetchSessions(); }, []);
+  useEffect(() => { fetchExams(); fetchUsers(); fetchSessions(); fetchMessages(); }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Deactivate this exam?")) return;
@@ -205,7 +223,7 @@ export function AdminDashboard({ user, onLogout }) {
     onLogout();
   };
 
-  const tabs = ["exams", "schedule", "users", "violations"];
+  const tabs = ["exams", "schedule", "users", "violations", "messages"];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -242,8 +260,11 @@ export function AdminDashboard({ user, onLogout }) {
         <div className="flex gap-2 mb-6">
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition ${tab === t ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled Exams" : t === "users" ? "Login Activity" : "Violations"}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition relative ${tab === t ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled Exams" : t === "users" ? "Login Activity" : t === "violations" ? "Violations" : "Messages"}
+              {t === "messages" && unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadCount}</span>
+              )}
             </button>
           ))}
           <button onClick={() => setShowCreate(true)} className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
@@ -253,7 +274,34 @@ export function AdminDashboard({ user, onLogout }) {
 
         {/* Exam List / Users */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {tab === "violations" ? (
+          {tab === "messages" ? (
+            <div className="divide-y divide-gray-50">
+              {messages.length === 0 ? (
+                <div className="p-12 text-center text-gray-400">No messages from students yet.</div>
+              ) : messages.map((m) => (
+                <div key={m._id} className={`flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition ${!m.read ? "bg-indigo-50/40" : ""}`}>
+                  <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-indigo-600 font-bold text-sm">{m.studentName?.[0]?.toUpperCase() || "S"}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-semibold text-gray-900 text-sm">{m.studentName || "Student"}</p>
+                      {!m.read && <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">New</span>}
+                      <span className="text-xs text-gray-400 ml-auto">{new Date(m.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-indigo-600 mb-1">📝 {m.examTitle}</p>
+                    <p className="text-sm text-gray-700">{m.text}</p>
+                  </div>
+                  {!m.read && (
+                    <button onClick={() => markRead(m._id)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold whitespace-nowrap border border-indigo-200 px-3 py-1 rounded-lg hover:bg-indigo-50 transition">
+                      Mark Read
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : tab === "violations" ? (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>

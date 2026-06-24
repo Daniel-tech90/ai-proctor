@@ -18,6 +18,7 @@ app.use("/api/exams", require("./routes/exam.routes"));
 app.use("/api/sessions", require("./routes/session.routes"));
 app.use("/api/reports", require("./routes/report.routes"));
 app.use("/api/face", require("./routes/face.routes"));
+app.use("/api/messages", require("./routes/message.routes"));
 
 // Health check
 app.get("/api/health", (req, res) => res.json({ status: "OK", message: "AI Proctor API running" }));

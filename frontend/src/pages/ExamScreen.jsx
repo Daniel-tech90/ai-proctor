@@ -253,6 +253,10 @@ export default function ExamScreen({ exam, onFinish }) {
   const [sessionId, setSessionId] = useState(null);
   const [warning, setWarning] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [msgText, setMsgText] = useState("");
+  const [msgSent, setMsgSent] = useState(false);
+  const [msgSending, setMsgSending] = useState(false);
   const [proctoringAlerts, setProctoringAlerts] = useState(0);
   const token = localStorage.getItem("token");
   const camRef = useRef(null);
@@ -463,6 +467,22 @@ export default function ExamScreen({ exam, onFinish }) {
     const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [timeLeft, submitted, handleSubmit]);
+
+  const sendMessage = async () => {
+    if (!msgText.trim()) return;
+    setMsgSending(true);
+    try {
+      await fetch(`${API}/api/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: msgText.trim(), examTitle: exam.title }),
+      });
+      setMsgSent(true);
+      setMsgText("");
+      setTimeout(() => { setMsgSent(false); setShowMsgModal(false); }, 2000);
+    } catch {}
+    setMsgSending(false);
+  };
 
   const mins = String(Math.floor(timeLeft / 60)).padStart(2, "0");
   const secs = String(timeLeft % 60).padStart(2, "0");
@@ -676,6 +696,56 @@ export default function ExamScreen({ exam, onFinish }) {
           </button>
         </div>
       </div>
+
+      {/* Floating Message Button */}
+      <button onClick={() => { setShowMsgModal(true); setMsgSent(false); }}
+        title="Contact Manager"
+        className="fixed bottom-6 right-6 z-50 w-13 h-13 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center transition" style={{ width: 52, height: 52 }}>
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </button>
+
+      {/* Message Modal */}
+      {showMsgModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-gray-900">Contact Manager</h3>
+              </div>
+              <button onClick={() => setShowMsgModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Describe your issue. The exam manager will be notified immediately.</p>
+            {msgSent ? (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-6 text-center">
+                <p className="text-2xl mb-1">✅</p>
+                <p className="text-green-700 font-semibold text-sm">Message sent to manager!</p>
+              </div>
+            ) : (
+              <>
+                <textarea value={msgText} onChange={(e) => setMsgText(e.target.value)}
+                  placeholder="e.g. My screen is frozen, I can't click options..."
+                  rows={4}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4" />
+                <div className="flex gap-3">
+                  <button onClick={() => setShowMsgModal(false)}
+                    className="flex-1 border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={sendMessage} disabled={msgSending || !msgText.trim()}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+                    {msgSending ? "Sending..." : "Send Message"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
