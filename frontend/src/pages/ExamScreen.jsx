@@ -301,8 +301,31 @@ export default function ExamScreen({ exam, onFinish }) {
         centerBrightness += (centerData[i] + centerData[i + 1] + centerData[i + 2]) / 3;
       centerBrightness /= (centerData.length / 4);
 
+      // Detect phone screen — bright rectangular region in corners/sides
+      // Phone screens emit strong blue-white light, check corner brightness variance
+      const regions = [
+        ctx.getImageData(0, 0, 16, 16).data,   // top-left
+        ctx.getImageData(48, 0, 16, 16).data,  // top-right
+        ctx.getImageData(0, 32, 16, 16).data,  // bottom-left
+        ctx.getImageData(48, 32, 16, 16).data, // bottom-right
+      ];
+      const regionBrightness = regions.map((d) => {
+        let sum = 0;
+        for (let i = 0; i < d.length; i += 4)
+          sum += (d[i] + d[i + 1] + d[i + 2]) / 3;
+        return sum / (d.length / 4);
+      });
+      const maxRegion = Math.max(...regionBrightness);
+      const minRegion = Math.min(...regionBrightness);
+      const brightnessVariance = maxRegion - minRegion;
+
+      // Phone detection: one corner significantly brighter than rest (screen glow)
+      const phoneDetected = brightnessVariance > 80 && maxRegion > 160;
+
       if (brightness < 30) {
         showWarning("⚠️ Camera blocked or too dark! Please ensure your face is visible.");
+      } else if (phoneDetected) {
+        showWarning("📱 Mobile phone detected! Remove all electronic devices from view immediately.");
       } else if (centerBrightness < 40) {
         noFaceSeconds += 3;
         if (noFaceSeconds >= 6)
