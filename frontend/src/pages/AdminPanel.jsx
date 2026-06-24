@@ -191,7 +191,11 @@ export function AdminDashboard({ user, onLogout }) {
     } catch { setUsers([]); }
   };
 
-  useEffect(() => { fetchExams(); fetchUsers(); fetchSessions(); fetchCodes(); }, []);
+  useEffect(() => {
+    fetchExams(); fetchUsers(); fetchSessions(); fetchCodes(); fetchLiveSessions();
+    const interval = setInterval(fetchLiveSessions, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Deactivate this exam?")) return;
@@ -205,7 +209,17 @@ export function AdminDashboard({ user, onLogout }) {
     onLogout();
   };
 
-  const tabs = ["exams", "schedule", "users", "violations", "codes"];
+  const tabs = ["exams", "schedule", "users", "violations", "codes", "live"];
+
+  const [liveSessions, setLiveSessions] = useState([]);
+
+  const fetchLiveSessions = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/active-sessions`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const data = await res.json();
+      setLiveSessions(Array.isArray(data) ? data : []);
+    } catch { setLiveSessions([]); }
+  };
 
   const [codes, setCodes] = useState([]);
   const [codeForm, setCodeForm] = useState({ code: "", password: "", examId: "", maxUsers: 8 });
@@ -307,7 +321,13 @@ export function AdminDashboard({ user, onLogout }) {
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition ${tab === t ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled" : t === "users" ? "Login Activity" : t === "violations" ? "Violations" : "Exam Codes"}
+              {t === "exams" ? "All Exams" : t === "schedule" ? "Scheduled" : t === "users" ? "Login Activity" : t === "violations" ? "Violations" : t === "codes" ? "Exam Codes" : (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block" />
+                  Live Sessions
+                  {liveSessions.length > 0 && <span className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">{liveSessions.length}</span>}
+                </span>
+              )}
             </button>
           ))}
           <button onClick={() => setShowCreate(true)} className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
@@ -317,7 +337,43 @@ export function AdminDashboard({ user, onLogout }) {
 
         {/* Exam List / Users */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {tab === "codes" ? (
+          {tab === "live" ? (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {["Student", "Email", "Role", "IP Address", "Device / Browser", "Logged In At"].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {liveSessions.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No active sessions right now.</td></tr>
+                ) : liveSessions.map((s, i) => {
+                  const ua = s.userAgent || "";
+                  const browser = ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : ua.includes("Edge") ? "Edge" : "Unknown";
+                  const device = ua.includes("Mobile") ? "📱 Mobile" : "🖥️ Desktop";
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                        {s.name}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 text-xs">{s.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
+                          s.role === "admin" ? "bg-red-50 text-red-600" : s.role === "proctor" ? "bg-yellow-50 text-yellow-600" : "bg-green-50 text-green-600"
+                        }`}>{s.role}</span>
+                      </td>
+                      <td className="px-4 py-3"><span className="text-xs font-mono bg-gray-100 text-gray-700 px-2 py-1 rounded">{s.ip}</span></td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{device} · {browser}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{new Date(s.loginAt).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : tab === "codes" ? (
             <div>
               <div className="p-6 border-b border-gray-100 bg-gray-50">
                 <h3 className="font-bold text-gray-800 text-sm mb-4">Create Exam Access Code</h3>

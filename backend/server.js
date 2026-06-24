@@ -29,7 +29,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("MongoDB connected");
-    await require("./models/User").updateMany({}, { isLoggedIn: false });
+    await require("./models/User").updateMany({}, { isLoggedIn: false, activeSessions: [] });
     console.log("Cleared stale login flags");
     app.listen(process.env.PORT || 5000, () =>
       console.log(`Server running on port ${process.env.PORT || 5000}`)

@@ -20,9 +20,14 @@ exports.login = async (req, res) => {
       || req.connection?.remoteAddress
       || req.socket?.remoteAddress
       || "Unknown";
-    await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date(), lastLoginIp: ip });
-
-    res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role, hasFace: user.faceDescriptor?.length === 128 } });
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    const token = generateToken(user._id);
+    await User.findByIdAndUpdate(user._id, {
+      lastLoginAt: new Date(),
+      lastLoginIp: ip,
+      $push: { activeSessions: { ip, userAgent, loginAt: new Date() } },
+    });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, hasFace: user.faceDescriptor?.length === 128 } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -91,6 +96,32 @@ exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password -faceDescriptor").sort({ lastLoginAt: -1 });
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getActiveSessions = async (req, res) => {
+  try {
+    const users = await User.find({ "activeSessions.0": { $exists: true } })
+      .select("name email role activeSessions lastLoginAt lastLoginIp");
+    const sessions = [];
+    users.forEach((u) => {
+      u.activeSessions.forEach((s) => {
+        sessions.push({
+          userId: u._id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          ip: s.ip,
+          userAgent: s.userAgent,
+          loginAt: s.loginAt,
+          sessionId: s._id,
+        });
+      });
+    });
+    sessions.sort((a, b) => new Date(b.loginAt) - new Date(a.loginAt));
+    res.json(sessions);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

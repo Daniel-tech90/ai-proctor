@@ -12,6 +12,13 @@ const userSchema = new mongoose.Schema(
     isLoggedIn: { type: Boolean, default: false },
     lastLoginAt: { type: Date, default: null },
     lastLoginIp: { type: String, default: null },
+    activeSessions: [
+      {
+        ip: String,
+        userAgent: String,
+        loginAt: { type: Date, default: Date.now },
+      }
+    ],
   },
   { timestamps: true }
 );
