@@ -598,9 +598,9 @@ export default function ExamScreen({ exam, onFinish }) {
               <p className="font-bold text-red-400">{tabSwitches + fullscreenExits + proctoringAlerts}</p>
             </div>
           )}
-          <div className={`text-center px-4 py-2 rounded-xl ${timeLeft < 60 ? "bg-red-600 animate-pulse" : "bg-blue-600"}`}>
+          <div className={`text-center px-4 py-2 rounded-xl ${timeLeft < 60 ? "bg-red-600" : "bg-blue-600"}`}>
             <p className="text-xs text-white/70">Time Left</p>
-            <p className="font-bold text-lg">{mins}:{secs}</p>
+            <p className="font-bold text-xl font-mono tracking-widest" style={{ textShadow: "none", WebkitFontSmoothing: "antialiased" }}>{mins}:{secs}</p>
           </div>
         </div>
       </div>
