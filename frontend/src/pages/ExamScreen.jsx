@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import "@tensorflow/tfjs";
 
 const API = "https://ai-proctor-23da.onrender.com";
 
@@ -254,6 +256,7 @@ export default function ExamScreen({ exam, onFinish }) {
   const camRef = useRef(null);
   const proctoringRef = useRef(null);
   const warningTimeoutRef = useRef(null);
+  const cocoModelRef = useRef(null);
   const API = "https://ai-proctor-23da.onrender.com";
 
   const showWarning = useCallback((msg) => {
@@ -263,8 +266,9 @@ export default function ExamScreen({ exam, onFinish }) {
     warningTimeoutRef.current = setTimeout(() => setWarning(null), 5000);
   }, []);
 
-  // Start camera on exam mount, stop on submit
+  // Load COCO-SSD model + start camera
   useEffect(() => {
+    cocoSsd.load().then((model) => { cocoModelRef.current = model; }).catch(() => {});
     navigator.mediaDevices
       .getUserMedia({ video: { width: 160, height: 120, facingMode: "user" } })
       .then((stream) => { if (camRef.current) camRef.current.srcObject = stream; })
@@ -321,6 +325,19 @@ export default function ExamScreen({ exam, onFinish }) {
 
       // Phone detection: one corner significantly brighter than rest (screen glow)
       const phoneDetected = brightnessVariance > 120 && maxRegion > 200 && minRegion < 100;
+
+      // COCO-SSD object detection — detect forbidden objects (exclude "person")
+      if (cocoModelRef.current && camRef.current) {
+        cocoModelRef.current.detect(camRef.current).then((predictions) => {
+          const forbidden = predictions.filter(
+            (p) => p.class !== "person" && p.score > 0.55
+          );
+          if (forbidden.length > 0) {
+            const names = [...new Set(forbidden.map((p) => p.class))].join(", ");
+            showWarning(`🚨 Object detected: ${names}! Remove all unauthorized items from view.`);
+          }
+        }).catch(() => {});
+      }
 
       if (brightness < 30) {
         showWarning("⚠️ Camera blocked or too dark! Please ensure your face is visible.");
