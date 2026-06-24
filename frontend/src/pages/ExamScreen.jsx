@@ -320,7 +320,7 @@ export default function ExamScreen({ exam, onFinish }) {
       const brightnessVariance = maxRegion - minRegion;
 
       // Phone detection: one corner significantly brighter than rest (screen glow)
-      const phoneDetected = brightnessVariance > 80 && maxRegion > 160;
+      const phoneDetected = brightnessVariance > 120 && maxRegion > 200 && minRegion < 100;
 
       if (brightness < 30) {
         showWarning("⚠️ Camera blocked or too dark! Please ensure your face is visible.");
