@@ -250,7 +250,8 @@ export default function ExamScreen({ exam, onFinish }) {
   const [tabSwitches, setTabSwitches] = useState(0);
   const [fullscreenExits, setFullscreenExits] = useState(0);
   const [sessionId, setSessionId] = useState(null);
-  const [warning, setWarning] = useState(null); // proctoring warning
+  const [warning, setWarning] = useState(null);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [proctoringAlerts, setProctoringAlerts] = useState(0);
   const token = localStorage.getItem("token");
   const camRef = useRef(null);
@@ -470,6 +471,58 @@ export default function ExamScreen({ exam, onFinish }) {
   // ─── Exam UI ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col relative overflow-hidden">
+      {/* Submit Confirmation Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 text-lg">Submit Exam?</h3>
+              <button onClick={() => setShowSubmitModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-5">{exam.title} &nbsp;·&nbsp; {exam.subject}</p>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {[
+                ["📝", "Total Questions", total, "text-gray-700"],
+                ["✅", "Attempted", answered, "text-green-600"],
+                ["⬜", "Unattempted", total - answered, "text-red-500"],
+                ["⏱️", "Time Used", `${exam.duration * 60 - timeLeft < 60 ? `${exam.duration * 60 - timeLeft}s` : `${Math.floor((exam.duration * 60 - timeLeft) / 60)}m ${(exam.duration * 60 - timeLeft) % 60}s`}`, "text-blue-600"],
+                ["🔁", "Tab Switches", tabSwitches, "text-orange-500"],
+                ["🚨", "Proctoring Alerts", proctoringAlerts, "text-red-500"],
+              ].map(([icon, label, val, color]) => (
+                <div key={label} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                  <span className="text-xl">{icon}</span>
+                  <div>
+                    <p className={`font-bold text-base ${color}`}>{val}</p>
+                    <p className="text-xs text-gray-500">{label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {answered < total && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-xs text-amber-800">
+                ⚠️ You have <strong>{total - answered} unattempted</strong> question{total - answered > 1 ? "s" : ""}. They will be marked as incorrect.
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowSubmitModal(false)}
+                className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl text-sm hover:bg-gray-100 transition">
+                ← Continue Exam
+              </button>
+              <button onClick={() => { setShowSubmitModal(false); handleSubmit(); }}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                Confirm Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Proctoring Warning Overlay */}
       {warning && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce max-w-md text-center">
@@ -555,7 +608,7 @@ export default function ExamScreen({ exam, onFinish }) {
                   Next →
                 </button>
               ) : (
-                <button onClick={() => { if (window.confirm("Submit exam now?")) handleSubmit(); }}
+                <button onClick={() => setShowSubmitModal(true)}
                   className="px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-sm font-semibold transition">
                   Submit Exam ✓
                 </button>
@@ -587,7 +640,7 @@ export default function ExamScreen({ exam, onFinish }) {
               </div>
             ))}
           </div>
-          <button onClick={() => { if (window.confirm("Submit exam now?")) handleSubmit(); }}
+          <button onClick={() => setShowSubmitModal(true)}
             className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-2.5 rounded-xl transition">
             Submit Exam
           </button>
