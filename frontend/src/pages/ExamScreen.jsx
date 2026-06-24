@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import * as blazeface from "@tensorflow-models/blazeface";
 import "@tensorflow/tfjs";
 
 const API = "https://ai-proctor-23da.onrender.com";
@@ -258,6 +259,8 @@ export default function ExamScreen({ exam, onFinish }) {
   const proctoringRef = useRef(null);
   const warningTimeoutRef = useRef(null);
   const cocoModelRef = useRef(null);
+  const blazeModelRef = useRef(null);
+  const noFaceCountRef = useRef(0);
   const API = "https://ai-proctor-23da.onrender.com";
 
   const showWarning = useCallback((msg) => {
@@ -270,6 +273,7 @@ export default function ExamScreen({ exam, onFinish }) {
   // Load COCO-SSD model + start camera
   useEffect(() => {
     cocoSsd.load().then((model) => { cocoModelRef.current = model; }).catch(() => {});
+    blazeface.load().then((model) => { blazeModelRef.current = model; }).catch(() => {});
     navigator.mediaDevices
       .getUserMedia({ video: { width: 160, height: 120, facingMode: "user" } })
       .then((stream) => { if (camRef.current) camRef.current.srcObject = stream; })
@@ -283,8 +287,6 @@ export default function ExamScreen({ exam, onFinish }) {
   // Proctoring — brightness-based face presence check every 3s
   useEffect(() => {
     if (submitted) return;
-    let noFaceSeconds = 0;
-
     proctoringRef.current = setInterval(() => {
       if (!camRef.current || !camRef.current.srcObject) return;
       const canvas = document.createElement("canvas");
@@ -298,13 +300,6 @@ export default function ExamScreen({ exam, onFinish }) {
       for (let i = 0; i < data.length; i += 4)
         brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
       brightness /= (data.length / 4);
-
-      // Check center region brightness (where face should be)
-      const centerData = ctx.getImageData(16, 8, 32, 32).data;
-      let centerBrightness = 0;
-      for (let i = 0; i < centerData.length; i += 4)
-        centerBrightness += (centerData[i] + centerData[i + 1] + centerData[i + 2]) / 3;
-      centerBrightness /= (centerData.length / 4);
 
       // Detect phone screen — bright rectangular region in corners/sides
       // Phone screens emit strong blue-white light, check corner brightness variance
@@ -327,6 +322,19 @@ export default function ExamScreen({ exam, onFinish }) {
       // Phone detection: one corner significantly brighter than rest (screen glow)
       const phoneDetected = brightnessVariance > 120 && maxRegion > 200 && minRegion < 100;
 
+      // BlazeFace — real face detection
+      if (blazeModelRef.current && camRef.current) {
+        blazeModelRef.current.estimateFaces(camRef.current, false).then((faces) => {
+          if (faces.length === 0) {
+            noFaceCountRef.current += 1;
+            if (noFaceCountRef.current >= 2)
+              showWarning("👤 No face detected! Please look directly at the camera.");
+          } else {
+            noFaceCountRef.current = 0;
+          }
+        }).catch(() => {});
+      }
+
       // COCO-SSD object detection — detect forbidden objects (exclude "person")
       if (cocoModelRef.current && camRef.current) {
         cocoModelRef.current.detect(camRef.current).then((predictions) => {
@@ -344,10 +352,6 @@ export default function ExamScreen({ exam, onFinish }) {
         showWarning("⚠️ Camera blocked or too dark! Please ensure your face is visible.");
       } else if (phoneDetected) {
         showWarning("📱 Mobile phone detected! Remove all electronic devices from view immediately.");
-      } else if (centerBrightness < 40) {
-        noFaceSeconds += 3;
-        if (noFaceSeconds >= 6)
-          showWarning("⚠️ Face not detected! Please look at the camera.");
       } else if (brightness > 230) {
         showWarning("⚠️ Too much light detected! Avoid sitting against a bright background.");
       } else {
