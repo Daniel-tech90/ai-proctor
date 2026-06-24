@@ -474,10 +474,11 @@ export default function ExamScreen({ exam, onFinish }) {
       {warning && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce max-w-md text-center">
           <span className="text-2xl">🚨</span>
-          <div>
+          <div className="flex-1">
             <p className="font-bold text-sm">Proctoring Alert</p>
             <p className="text-xs text-red-100">{warning}</p>
           </div>
+          <button onClick={() => setWarning(null)} className="ml-2 text-white/70 hover:text-white text-lg leading-none">&times;</button>
         </div>
       )}
       {/* Watermark username */}
