@@ -20,14 +20,7 @@ exports.login = async (req, res) => {
       || req.connection?.remoteAddress
       || req.socket?.remoteAddress
       || "Unknown";
-    user.lastLoginAt = new Date();
-    user.lastLoginIp = ip;
-    user.isLoggedIn = true;
-    // Clear stale face descriptors (old format had different length)
-    if (user.faceDescriptor?.length && user.faceDescriptor.length !== 128) {
-      user.faceDescriptor = null;
-    }
-    await user.save();
+    await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date(), lastLoginIp: ip });
 
     res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role, hasFace: user.faceDescriptor?.length === 128 } });
   } catch (err) {
@@ -36,12 +29,7 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = async (req, res) => {
-  try {
-    await User.findByIdAndUpdate(req.user._id, { isLoggedIn: false });
-    res.json({ message: "Logged out" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  res.json({ message: "Logged out" });
 };
 
 exports.registerFace = async (req, res) => {
