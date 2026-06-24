@@ -78,6 +78,17 @@ exports.submitSession = async (req, res) => {
   }
 };
 
+exports.getMySessions = async (req, res) => {
+  try {
+    const sessions = await ExamSession.find({ student: req.user._id, status: "completed" })
+      .populate("exam", "title subject questions totalMarks")
+      .sort({ endedAt: -1 });
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getSessionById = async (req, res) => {
   try {
     const session = await ExamSession.findById(req.params.id).populate("student", "name email").populate("exam", "title subject");

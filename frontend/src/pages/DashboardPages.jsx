@@ -237,22 +237,52 @@ export function Blogs() {
 
 export function Dashboard() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/sessions/my`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setSessions(Array.isArray(data) ? data : []))
+      .catch(() => setSessions([]))
+      .finally(() => setLoadingSessions(false));
+  }, []);
+
+  // Compute stats from sessions
+  const totalExams = sessions.length;
+  const totalScore = sessions.reduce((s, x) => s + (x.score || 0), 0);
+  const totalQuestions = sessions.reduce((s, x) => s + (x.exam?.questions?.length || 0), 0);
+  const overallPct = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+
+  // Per-subject accuracy
+  const subjectMap = {};
+  sessions.forEach((s) => {
+    const subj = s.exam?.subject || "Unknown";
+    if (!subjectMap[subj]) subjectMap[subj] = { score: 0, total: 0 };
+    subjectMap[subj].score += s.score || 0;
+    subjectMap[subj].total += s.exam?.questions?.length || 0;
+  });
+  const subjectStats = Object.entries(subjectMap).map(([subj, { score, total }]) => ({
+    subj, score, total, pct: total > 0 ? Math.round((score / total) * 100) : 0,
+  }));
+
   const handleLogout = async () => {
     const token = localStorage.getItem("token");
-    await fetch("https://ai-proctor-23da.onrender.com/api/auth/logout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {});
+    await fetch(`${API}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.location.href = "/";
   };
 
+  const barColor = (pct) => pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-yellow-400" : "bg-red-500";
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Top Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* User Info Card */}
+        {/* User Info */}
         <div className="md:col-span-2 bg-[#1a3a6b] rounded-2xl p-6 text-white">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -261,7 +291,7 @@ export function Dashboard() {
               <div className="flex flex-wrap gap-2">
                 <button className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">Reported Issues</button>
                 <button className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">Change Password</button>
-                <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">logout</button>
+                <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">Logout</button>
               </div>
             </div>
             <div className="text-sm text-blue-100 space-y-2">
@@ -273,44 +303,92 @@ export function Dashboard() {
 
         {/* Overall Accuracy */}
         <div className="bg-[#1a3a6b] rounded-2xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-4">Your Overall Accuracy</h3>
-          <div className="flex justify-between text-sm mb-2">
-            <span></span>
-            <span className="font-bold">0%</span>
-          </div>
-          <div className="w-full bg-blue-500 rounded-full h-3">
-            <div className="bg-white h-3 rounded-full" style={{ width: "0%" }} />
-          </div>
+          <h3 className="text-lg font-semibold mb-3">Overall Accuracy</h3>
+          {loadingSessions ? (
+            <p className="text-blue-200 text-sm">Loading...</p>
+          ) : (
+            <>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-blue-200">{totalScore}/{totalQuestions} correct</span>
+                <span className="font-bold text-2xl">{overallPct}%</span>
+              </div>
+              <div className="w-full bg-blue-900 rounded-full h-4 mb-3">
+                <div className={`h-4 rounded-full transition-all duration-700 ${barColor(overallPct)}`} style={{ width: `${overallPct}%` }} />
+              </div>
+              <p className="text-blue-200 text-xs">{totalExams} exam{totalExams !== 1 ? "s" : ""} completed</p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Activity Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { title: "Assessment Activity", stats: [["Completed", "9/18"], ["Yet to Start", "9/18"]], link: "View Recent Assessments" },
-          { title: "Course Activity", stats: [["InProgress", "0/0"], ["Yet to Start", "0/0"]], link: "View Recent Courses" },
-          { title: "Practice Activity", stats: [["Completed", "0/0"], ["Yet to Start", "0/0"]], link: "View Recent Practice" },
-        ].map(({ title, stats, link }) => (
-          <div key={title} className="bg-white rounded-2xl border border-gray-200 p-6 relative overflow-hidden">
-            <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-tl-full opacity-60" />
-            <h3 className="font-bold text-gray-900 text-base mb-3">{title}</h3>
-            {stats.map(([label, val]) => (
-              <p key={label} className="text-gray-600 text-sm mb-1">{label}: <span className="font-medium">{val}</span></p>
-            ))}
-            <button className="text-blue-600 text-sm font-semibold mt-3 hover:underline">{link}</button>
+          { label: "Exams Taken",    val: totalExams,                       color: "text-blue-600",  bg: "bg-blue-50" },
+          { label: "Total Score",    val: `${totalScore}/${totalQuestions}`, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Overall %",      val: `${overallPct}%`,                 color: overallPct >= 50 ? "text-green-600" : "text-red-500", bg: overallPct >= 50 ? "bg-green-50" : "bg-red-50" },
+          { label: "Best Score",     val: sessions.length > 0 ? `${Math.max(...sessions.map((s) => s.exam?.questions?.length > 0 ? Math.round((s.score / s.exam.questions.length) * 100) : 0))}%` : "—", color: "text-purple-600", bg: "bg-purple-50" },
+        ].map(({ label, val, color, bg }) => (
+          <div key={label} className={`${bg} rounded-2xl p-4 border border-gray-100`}>
+            <p className={`text-2xl font-bold ${color}`}>{loadingSessions ? "..." : val}</p>
+            <p className="text-xs text-gray-500 mt-1">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Accuracy Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {["MCQ: Subject Level Accuracy", "Coding: Programming wise Accuracy"].map((title) => (
-          <div key={title} className="bg-white rounded-2xl border border-gray-200 p-6 min-h-[200px] relative overflow-hidden">
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-50 rounded-tl-full opacity-40" />
-            <h3 className="font-bold text-gray-900 text-base mb-4">{title}</h3>
-            <div className="flex items-center justify-center h-28 text-gray-400 text-sm">No data available</div>
-          </div>
-        ))}
+      {/* Subject-wise Accuracy */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="font-bold text-gray-900 text-base mb-4">Subject-wise Accuracy</h3>
+          {loadingSessions ? (
+            <p className="text-gray-400 text-sm">Loading...</p>
+          ) : subjectStats.length === 0 ? (
+            <p className="text-gray-400 text-sm">No exam data yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {subjectStats.map(({ subj, score, total, pct }) => (
+                <div key={subj}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-gray-700">{subj}</span>
+                    <span className={`font-bold ${pct >= 75 ? "text-green-600" : pct >= 50 ? "text-yellow-500" : "text-red-500"}`}>{pct}% ({score}/{total})</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-3">
+                    <div className={`h-3 rounded-full transition-all duration-700 ${barColor(pct)}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Exams */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="font-bold text-gray-900 text-base mb-4">Recent Exams</h3>
+          {loadingSessions ? (
+            <p className="text-gray-400 text-sm">Loading...</p>
+          ) : sessions.length === 0 ? (
+            <p className="text-gray-400 text-sm">No exams taken yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {sessions.slice(0, 5).map((s) => {
+                const total = s.exam?.questions?.length || 0;
+                const pct = total > 0 ? Math.round((s.score / total) * 100) : 0;
+                return (
+                  <div key={s._id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{s.exam?.title || "Exam"}</p>
+                      <p className="text-xs text-gray-400">{s.exam?.subject} · {new Date(s.endedAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${pct >= 50 ? "text-green-600" : "text-red-500"}`}>{pct}%</p>
+                      <p className="text-xs text-gray-400">{s.score}/{total}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
