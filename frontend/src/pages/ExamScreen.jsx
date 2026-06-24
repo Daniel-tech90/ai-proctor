@@ -261,6 +261,7 @@ export default function ExamScreen({ exam, onFinish }) {
   const cocoModelRef = useRef(null);
   const blazeModelRef = useRef(null);
   const noFaceCountRef = useRef(0);
+  const lookAwayCountRef = useRef(0);
   const API = "https://ai-proctor-23da.onrender.com";
 
   const showWarning = useCallback((msg) => {
@@ -322,15 +323,40 @@ export default function ExamScreen({ exam, onFinish }) {
       // Phone detection: one corner significantly brighter than rest (screen glow)
       const phoneDetected = brightnessVariance > 120 && maxRegion > 200 && minRegion < 100;
 
-      // BlazeFace — real face detection
+      // BlazeFace — real face detection + gaze direction
       if (blazeModelRef.current && camRef.current) {
         blazeModelRef.current.estimateFaces(camRef.current, false).then((faces) => {
           if (faces.length === 0) {
             noFaceCountRef.current += 1;
+            lookAwayCountRef.current = 0;
             if (noFaceCountRef.current >= 2)
               showWarning("👤 No face detected! Please look directly at the camera.");
           } else {
             noFaceCountRef.current = 0;
+            // landmarks: [rightEye, leftEye, nose, mouth, rightEar, leftEar]
+            const lm = faces[0].landmarks;
+            const rightEye = lm[0]; // [x, y]
+            const leftEye  = lm[1];
+            const nose     = lm[2];
+            const faceBox  = faces[0].topLeft && faces[0].bottomRight
+              ? faces[0].bottomRight[0] - faces[0].topLeft[0]
+              : 100;
+            // Eye midpoint x vs nose x — if nose drifts far left/right, head is turned
+            const eyeMidX = (rightEye[0] + leftEye[0]) / 2;
+            const noseOffset = Math.abs(nose[0] - eyeMidX);
+            const eyeSpan = Math.abs(leftEye[0] - rightEye[0]);
+            // Also check if face is near edge of frame (looking away)
+            const videoW = camRef.current.videoWidth || 160;
+            const faceCenterX = (faces[0].topLeft[0] + faces[0].bottomRight[0]) / 2;
+            const edgeRatio = Math.abs(faceCenterX - videoW / 2) / (videoW / 2);
+            const isLookingAway = (eyeSpan > 5 && noseOffset / eyeSpan > 0.55) || edgeRatio > 0.55;
+            if (isLookingAway) {
+              lookAwayCountRef.current += 1;
+              if (lookAwayCountRef.current >= 2)
+                showWarning("👀 You are looking away! Please keep your eyes on the screen.");
+            } else {
+              lookAwayCountRef.current = 0;
+            }
           }
         }).catch(() => {});
       }
@@ -355,7 +381,7 @@ export default function ExamScreen({ exam, onFinish }) {
       } else if (brightness > 230) {
         showWarning("⚠️ Too much light detected! Avoid sitting against a bright background.");
       } else {
-        noFaceSeconds = 0;
+        // face/brightness ok
       }
     }, 3000);
 
