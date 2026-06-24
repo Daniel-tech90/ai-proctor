@@ -5,16 +5,7 @@ const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
 
 exports.register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-    if (await User.findOne({ email }))
-      return res.status(400).json({ message: "Email already registered" });
-
-    const user = await User.create({ name, email, password, role });
-    res.status(201).json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  return res.status(403).json({ message: "Registration is disabled. Contact admin." });
 };
 
 exports.login = async (req, res) => {
@@ -91,6 +82,27 @@ exports.verifyFace = async (req, res) => {
       return res.status(401).json({ message: "Face verification failed. Please try again.", distance });
 
     res.json({ message: "Face verified", distance });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.createUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (await User.findOne({ email }))
+      return res.status(400).json({ message: "Email already registered" });
+    const user = await User.create({ name, email, password, role });
+    res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
