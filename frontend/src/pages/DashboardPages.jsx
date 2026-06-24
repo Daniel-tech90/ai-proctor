@@ -45,7 +45,7 @@ export function Assessments() {
             <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-bl-full opacity-60" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">{exam.subject}</span>
-              <span className="text-xs text-gray-400">{exam.duration} min</span>
+              <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded-lg">{exam.duration} min</span>
             </div>
             <h3 className="font-bold text-gray-900 text-base mb-2">{exam.title}</h3>
             <p className="text-sm text-gray-500 mb-1">Total Marks: <span className="font-medium text-gray-700">{exam.totalMarks}</span></p>
