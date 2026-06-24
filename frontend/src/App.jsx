@@ -8,6 +8,7 @@ import DashboardPreview from "./components/DashboardPreview";
 import Footer from "./components/Footer";
 import { Assessments, Courses, Code, Practice, LSRW, Blogs, Dashboard } from "./pages/DashboardPages";
 import { AdminLogin, AdminDashboard } from "./pages/AdminPanel";
+import ExamCodeLogin from "./pages/ExamCodeLogin";
 
 function LandingPage({ user, onLogin, onLogout }) {
   return (
@@ -32,6 +33,30 @@ function DashboardLayout({ user, onLogin, onLogout, children }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} onLogin={onLogin} onLogout={onLogout} />
       <main className="pt-20">{children}</main>
+    </div>
+  );
+}
+
+function ExamCodeRoute() {
+  const [examSession, setExamSession] = useState(() => {
+    const saved = localStorage.getItem("examData");
+    return saved ? JSON.parse(saved) : null;
+  });
+  if (!examSession) return <ExamCodeLogin onLogin={(data) => setExamSession(data.exam)} />;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-800">Your Exam</h2>
+          <button onClick={() => { localStorage.removeItem("examToken"); localStorage.removeItem("examData"); setExamSession(null); }}
+            className="text-xs text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Exit</button>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="font-bold text-gray-900 text-lg mb-1">{examSession.title}</h3>
+          <p className="text-gray-500 text-sm mb-4">{examSession.subject} · {examSession.duration} min · {examSession.totalMarks} marks</p>
+          <p className="text-gray-500 text-sm">Questions: {examSession.questions?.length || 0}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -79,6 +104,7 @@ export default function App() {
         <Route path="/dashboard" element={
           user ? <DashboardLayout user={user} onLogin={handleLogin} onLogout={handleLogout}><Dashboard /></DashboardLayout> : <Navigate to="/" replace />
         } />
+        <Route path="/exam" element={<ExamCodeRoute />} />
         <Route path="/admin" element={<AdminRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
